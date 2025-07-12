@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "__MSG_extName__",
-  "version": "1.0.0",
-  "description": "__MSG_extDescription__",
-  "default_locale":"zh_CN",
+  "name": "我的投资助手",
+  "version": "0.0.3",
+  "description": "获取数据、提示持仓",
+  "default_locale": "zh_CN",
   "icons": {
     "16": "img/icon16.png",
     "32": "img/icon32.png",
@@ -23,23 +23,47 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["js/jquery-3.6.4.min.js", "js/content.js"],
-      "run_at": "document_idle"
+      "matches": [
+        "https://xueqiu.com/S/*",
+        "https://quote.eastmoney.com/*",
+        "https://youzhiyouxing.cn/*"
+      ],
+      "js": [
+        "js/content_youzhiyouxing.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://trade.ehowbuy.com/*"
+      ],
+      "js": [
+        "js/content_haomai.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://stock.cheesefortune.com/*"
+      ],
+      "js": [
+        "js/content_cheesefortune.js"
+      ]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["img/*.png"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "img/*.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "options_ui": {
     "page": "html/options.html",
     "open_in_tab": false
   },
-  "host_permissions":[
+  "host_permissions": [
     "*://*.baidu.com/*"
   ]
-  
 }
