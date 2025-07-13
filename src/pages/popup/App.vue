@@ -21,12 +21,39 @@
         <td>{{ item.name }}</td>
         <td>{{ item.temperature }}</td>
         <td>{{ item.yield }}</td>
-        <td v-for="date in ['2015-6-12', '2019-1-2', '2021-2-19', '2022-4-26', '2022-10-31', '2024-2-5', '2024-9-13']" :key="date" :class="{ 'highlight': item[`${date}_isNext`] }">
+        <td v-for="date in ['2015-6-12', '2019-1-2', '2021-2-19', '2022-4-26', '2022-10-31', '2024-2-5', '2024-9-13']" :key="date" :class="{ 'highlight': item[`${date}_isNext`], 'deep-green': (date === '2019-1-2' && shouldHighlight2019) || (date === '2024-2-5' && shouldHighlight2024) }">
           {{ item[date] || 'N/A' }}
         </td>
       </tr>
     </tbody>
   </table>
+    <h2>指数参考</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>指数名称</th>
+          <th>代码</th>
+          <th>观点</th>
+          <th>支撑点位</th>
+          <th>距离支撑</th>
+          <th>近年最低</th>
+          <th>已反弹高</th>
+          <th>最大跌幅</th>
+          <th>极度价值</th>
+          <th>价值区间下沿</th>
+          <th>价值区间上沿</th>
+          <th>正常区间下沿</th>
+          <th>正常区间上沿</th>
+          <th>压力位</th>
+          <th>现市盈率</th>
+          <th>建议仓位</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 表格内容将在后续步骤添加 -->
+      </tbody>
+    </table>
 </template>
 
 <script>
@@ -61,7 +88,10 @@ export default {
             '2024-2-5': '9.9',
             '2024-9-13': '7.3'
           }
-        ]
+        ],
+      shouldHighlight2019: false,
+      shouldHighlight2024: false,
+      todayTempValue: 0
     }
   },
   methods: {
@@ -76,6 +106,7 @@ export default {
       console.log('chrome.storage.local 的值为:', result);
       this.temperatureData[1].temperature = result['haomai_today-temp'] ? `${result['haomai_today-temp']}°` : 'N/A';
         if (result.todayTemp) {
+          this.todayTempValue = parseFloat(result.todayTemp);
           this.temperatureData[0].temperature = `${result.todayTemp}°`;
         if (result.dateDegreeDB) {
           const todayTempValue = parseFloat(result.todayTemp);
@@ -118,6 +149,15 @@ export default {
             }
           }
         });
+        // 检查是否需要高亮2019-1-2的单元格
+        const targetDate2019 = '2019-1-2';
+        const targetTemp2019 = parseFloat(this.temperatureData[0][targetDate2019]) || 0;
+        this.shouldHighlight2019 = this.todayTempValue <= targetTemp2019;
+
+        // 检查是否需要高亮2024-2-5的单元格
+        const targetDate2024 = '2024-2-5';
+        const targetTemp2024 = parseFloat(this.temperatureData[0][targetDate2024]) || 0;
+        this.shouldHighlight2024 = this.todayTempValue <= targetTemp2024;
       }
     });
   }
@@ -126,14 +166,14 @@ export default {
 
 <style scoped>
 .table-container {
-  padding: 15px;
+  padding: 12px;
   font-family: Arial, sans-serif;
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
@@ -164,6 +204,11 @@ export default {
   background-color: #fff3cd !important;
   font-weight: bold;
   border-left: 3px solid #ffc107;
+}
+
+.deep-green {
+  background-color: #006400 !important;
+  color: white !important;
 }
 
 .data-table td:first-child {
