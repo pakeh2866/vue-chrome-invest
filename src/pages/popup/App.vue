@@ -27,13 +27,16 @@
       </tr>
     </tbody>
   </table>
-    <h2>指数参考</h2>
+    <div style="display: flex; align-items: center;">
+        <h2 style="margin-right: 10px;">指数参考</h2>
+        <button @click="addIndex">新增指数</button>
+      </div>
     <table class="data-table">
       <thead>
         <tr>
           <th>指数名称</th>
           <th>代码</th>
-          <th>观点</th>
+          <th>现指数点位</th>
           <th>支撑点位</th>
           <th>距离支撑</th>
           <th>近年最低</th>
@@ -51,9 +54,91 @@
         </tr>
       </thead>
       <tbody>
-        <!-- 表格内容将在后续步骤添加 -->
+        <tr v-for="(item, index) in indexData" :key="index">
+          <td>{{ item.name }}</td>
+          <td>{{ item.code }}</td>
+          <td>{{ item.currentIndexPoint }}</td>
+          <td>{{ item.supportLevel }}</td>
+          <td>{{ item.distanceToSupport }}</td>
+          <td>{{ item.recentLowest }}</td>
+          <td>{{ item.reboundHigh }}</td>
+          <td>{{ item.maxDrawdown }}</td>
+          <td>{{ item.extremeValue }}</td>
+          <td>{{ item.valueRangeLower }}</td>
+          <td>{{ item.valueRangeUpper }}</td>
+          <td>{{ item.normalRangeLower }}</td>
+          <td>{{ item.normalRangeUpper }}</td>
+          <td>{{ item.pressureLevel }}</td>
+          <td>{{ item.currentPE }}</td>
+          <td>{{ item.suggestedPosition }}</td>
+          <td>
+            <button @click="editIndex(index)">编辑</button>
+            <button @click="deleteIndex(index)">删除</button>
+          </td>
+        </tr>
       </tbody>
     </table>
+
+    <!-- 新增指数模态框 -->
+    <div v-if="showAddIndexModal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>{{ isEditing ? '编辑指数' : '添加指数' }}</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>指数名称</label>
+            <input v-model="newIndexData.name" type="text" placeholder="请输入指数名称">
+          </div>
+          <div class="form-group">
+            <label>代码</label>
+            <input v-model="newIndexData.code" type="text" placeholder="请输入代码">
+          </div>
+          <div class="form-group">
+            <label>现指数点位</label>
+            <input v-model.number="newIndexData.currentIndexPoint" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>支撑点位</label>
+            <input v-model.number="newIndexData.supportLevel" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>近两年最低</label>
+            <input v-model.number="newIndexData.twoYearLow" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>前高</label>
+            <input v-model.number="newIndexData.previousHigh" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>极度价值</label>
+            <input v-model="newIndexData.extremeValue" type="text" placeholder="请输入极度价值">
+          </div>
+          <div class="form-group">
+            <label>价值区间下沿</label>
+            <input v-model="newIndexData.valueRangeLower" type="text" placeholder="请输入价值区间下沿">
+          </div>
+          <div class="form-group">
+            <label>价值区间上沿</label>
+            <input v-model="newIndexData.valueRangeUpper" type="text" placeholder="请输入价值区间上沿">
+          </div>
+          <div class="form-group">
+            <label>正常区间下沿</label>
+            <input v-model="newIndexData.normalRangeLower" type="text" placeholder="请输入正常区间下沿">
+          </div>
+          <div class="form-group">
+            <label>正常区间上沿</label>
+            <input v-model="newIndexData.normalRangeUpper" type="text" placeholder="请输入正常区间上沿">
+          </div>
+          <div class="form-group">
+            <label>压力位</label>
+            <input v-model.number="newIndexData.pressureLevel" type="number" placeholder="0">
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button @click="cancelAddIndex" class="cancel-btn">取消</button>
+          <button @click="saveIndex" class="save-btn">{{ isEditing ? '更新' : '保存' }}</button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script>
@@ -69,6 +154,24 @@ const targetUrls = [
 export default {
   data() {
     return {
+      showAddIndexModal: false,
+      isEditing: false,
+      currentEditIndex: -1,
+      newIndexData: {
+        name: '',
+        code: '',
+        currentIndexPoint: 0,
+        supportLevel: 0,
+        twoYearLow: 0,
+        previousHigh: 0,
+        extremeValue: '',
+        valueRangeLower: '',
+        valueRangeUpper: '',
+        normalRangeLower: '',
+        normalRangeUpper: '',
+        pressureLevel: 0
+      },
+      indexData: [],
       targetUrls,
       temperatureData: [
           {
@@ -95,6 +198,94 @@ export default {
     }
   },
   methods: {
+    editIndex(index) {
+      const item = this.indexData[index];
+  this.newIndexData = {
+    ...item,
+    currentIndexPoint: item.viewPoint !== undefined ? item.viewPoint : item.currentIndexPoint,
+  };
+  delete this.newIndexData.viewPoint;
+      this.showAddIndexModal = true;
+      this.isEditing = true;
+      this.currentEditIndex = index;
+    },
+    deleteIndex(index) {
+      if (confirm('确定要删除这条指数数据吗？')) {
+        this.indexData.splice(index, 1);
+        chrome.storage.local.set({ 'indexData': this.indexData }, () => {
+          console.log('指数数据已删除');
+        });
+      }
+    },
+    addIndex() {
+      this.showAddIndexModal = true;
+    },
+    saveIndex() {
+      // 验证必填字段
+      if (!this.newIndexData.name || !this.newIndexData.code) {
+        alert('指数名称和代码为必填项');
+        return;
+      }
+      
+      if (this.isEditing) {
+        // 更新现有指数
+        this.indexData[this.currentEditIndex] = {
+          ...this.newIndexData,
+          distanceToSupport: this.calculateDistanceToSupport(),
+          recentLowest: this.newIndexData.twoYearLow,
+          reboundHigh: this.indexData[this.currentEditIndex].reboundHigh,
+          maxDrawdown: this.indexData[this.currentEditIndex].maxDrawdown,
+          currentPE: this.indexData[this.currentEditIndex].currentPE,
+          suggestedPosition: this.indexData[this.currentEditIndex].suggestedPosition
+        };
+        this.isEditing = false;
+        this.currentEditIndex = -1;
+      } else {
+        // 添加新指数
+        this.indexData.push({
+          ...this.newIndexData,
+          distanceToSupport: this.calculateDistanceToSupport(),
+          recentLowest: this.newIndexData.twoYearLow,
+          reboundHigh: 0,
+          maxDrawdown: 0,
+          currentPE: 0,
+          suggestedPosition: '0%'
+        });
+      }
+      
+      // 保存到本地存储
+      chrome.storage.local.set({ 'indexData': this.indexData }, () => {
+        console.log(this.isEditing ? '指数数据已更新' : '指数数据已保存');
+      });
+      
+      // 重置表单并关闭模态框
+      this.resetForm();
+      this.showAddIndexModal = false;
+    },
+    cancelAddIndex() {
+      this.resetForm();
+      this.showAddIndexModal = false;
+    },
+    resetForm() {
+      this.newIndexData = {
+        name: '',
+        code: '',
+        currentIndexPoint: 0,
+        supportLevel: 0,
+        twoYearLow: 0,
+        previousHigh: 0,
+        extremeValue: '',
+        valueRangeLower: '',
+        valueRangeUpper: '',
+        normalRangeLower: '',
+        normalRangeUpper: '',
+        pressureLevel: 0
+      };
+    },
+    calculateDistanceToSupport() {
+      // 简单计算距离支撑位的百分比
+      return this.newIndexData.supportLevel ? '0%' : 'N/A';
+    },
     fetchData() {
       this.targetUrls.forEach(url => {
         window.open(url, '_blank');
@@ -102,8 +293,15 @@ export default {
     }
   },
   mounted() {
-    chrome.storage.local.get(['todayTemp', 'dateDegreeDB', 'haomai_today-temp'], (result) => {
+    chrome.storage.local.get(['todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData'], (result) => {
       console.log('chrome.storage.local 的值为:', result);
+      this.indexData = (result.indexData || []).map(item => {
+        // 迁移旧数据中的viewPoint到currentIndexPoint
+        if (item.viewPoint !== undefined) {
+          return { ...item, currentIndexPoint: item.viewPoint, viewPoint: undefined };
+        }
+        return item;
+      });
       this.temperatureData[1].temperature = result['haomai_today-temp'] ? `${result['haomai_today-temp']}°` : 'N/A';
         if (result.todayTemp) {
           this.todayTempValue = parseFloat(result.todayTemp);
@@ -189,7 +387,7 @@ export default {
   background-color: #42b983;
   color: white;
   font-weight: bold;
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .data-table tr:nth-child(even) {
@@ -214,6 +412,75 @@ export default {
 .data-table td:first-child {
   font-weight: bold;
 }
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.form-group input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.save-btn {
+  padding: 8px 16px;
+  background-color: #42b983;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
 </style>
 
 <style lang="scss">
@@ -233,6 +500,6 @@ th, td {
 }
 th {
   padding: 10px 20px;
-  font-size: 16px;
+  font-size: 12px;
 }
 </style>
