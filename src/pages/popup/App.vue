@@ -294,8 +294,15 @@ export default {
   },
   mounted() {
     chrome.storage.local.get(['todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData'], (result) => {
-      console.log('chrome.storage.local 的值为:', result);
-      this.indexData = (result.indexData || []).map(item => {
+      console.log('读取到的indexData:', result.indexData);
+      let arr = [];
+      if (Array.isArray(result.indexData)) {
+        arr = result.indexData;
+      } else if (typeof result.indexData === 'object' && result.indexData !== null) {
+        // 可能是 {0: {...}, 1: {...}} 这种对象
+        arr = Object.values(result.indexData);
+      }
+      this.indexData = arr.map(item => {
         // 迁移旧数据中的viewPoint到currentIndexPoint
         if (item.viewPoint !== undefined) {
           return { ...item, currentIndexPoint: item.viewPoint, viewPoint: undefined };
