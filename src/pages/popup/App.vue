@@ -27,7 +27,7 @@
       </tr>
     </tbody>
   </table>
-    <div style="display: flex; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 10px;">
         <h2 style="margin-right: 10px;">指数参考</h2>
         <button @click="addIndex">新增指数</button>
       </div>
@@ -71,7 +71,8 @@
           <td>{{ item.pressureLevel }}</td>
           <td>{{ item.currentPE }}</td>
           <td>{{ item.suggestedPosition }}</td>
-          <td>
+          <td class="action-buttons">
+            <button @click="onCheeseDataClick(item)">芝士数据</button>
             <button @click="editIndex(index)">编辑</button>
             <button @click="deleteIndex(index)">删除</button>
           </td>
@@ -132,6 +133,10 @@
             <label>压力位</label>
             <input v-model.number="newIndexData.pressureLevel" type="number" placeholder="0">
           </div>
+          <div class="form-group">
+            <label>芝士链接</label>
+            <input v-model="newIndexData.cheeseUrl" type="text" placeholder="请输入芝士链接">
+          </div>
         </div>
         <div class="modal-buttons">
           <button @click="cancelAddIndex" class="cancel-btn">取消</button>
@@ -169,7 +174,8 @@ export default {
         valueRangeUpper: '',
         normalRangeLower: '',
         normalRangeUpper: '',
-        pressureLevel: 0
+        pressureLevel: 0,
+        cheeseUrl: ''
       },
       indexData: [],
       targetUrls,
@@ -203,6 +209,7 @@ export default {
   this.newIndexData = {
     ...item,
     currentIndexPoint: item.viewPoint !== undefined ? item.viewPoint : item.currentIndexPoint,
+    cheeseUrl: item.cheeseUrl || ''
   };
   delete this.newIndexData.viewPoint;
       this.showAddIndexModal = true;
@@ -279,7 +286,8 @@ export default {
         valueRangeUpper: '',
         normalRangeLower: '',
         normalRangeUpper: '',
-        pressureLevel: 0
+        pressureLevel: 0,
+        cheeseUrl: ''
       };
     },
     calculateDistanceToSupport() {
@@ -290,11 +298,17 @@ export default {
       this.targetUrls.forEach(url => {
         window.open(url, '_blank');
       });
+    },
+    onCheeseDataClick(item) {
+      // 这里可以自定义跳转或弹窗等逻辑
+      const url = item.cheeseUrl && item.cheeseUrl.trim() ? item.cheeseUrl : 'https://stock.cheesefortune.com/';
+      window.open(url, '_blank');
     }
   },
   mounted() {
-    chrome.storage.local.get(['todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData'], (result) => {
+    chrome.storage.local.get(['todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData','all_pe_data'], (result) => {
       console.log('读取到的indexData:', result.indexData);
+      console.log('读取到的pe_values:', result.all_pe_data);
       let arr = [];
       if (Array.isArray(result.indexData)) {
         arr = result.indexData;
@@ -487,6 +501,18 @@ export default {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.action-buttons button {
+  margin-bottom: 0; /* 去掉按钮下边距 */
+  white-space: nowrap; /* 防止按钮文字换行 */
+  padding: 4px 10px;
+  font-size: 12px;
 }
 </style>
 
