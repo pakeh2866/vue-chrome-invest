@@ -1,5 +1,8 @@
 <template>
   <button @click="fetchData">获取数据</button>
+  <button @click="exportData" style="margin-left: 10px;">导出数据</button>
+  <input type="file" ref="importFile" style="display:none" @change="importData" accept=".json" />
+  <button @click="triggerImport" style="margin-left: 10px;">导入数据</button>
   <h2>整体温度数据</h2>
   <table>
     <thead>
@@ -303,6 +306,41 @@ export default {
       // 这里可以自定义跳转或弹窗等逻辑
       const url = item.cheeseUrl && item.cheeseUrl.trim() ? item.cheeseUrl : 'https://stock.cheesefortune.com/';
       window.open(url, '_blank');
+    },
+    exportData() {
+      // 读取所有本地存储数据
+      chrome.storage.local.get(null, (result) => {
+        const dataStr = JSON.stringify(result, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "chrome_plugin_data.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    },
+    triggerImport() {
+      this.$refs.importFile.click();
+    },
+    importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          chrome.storage.local.set(data, () => {
+            alert("数据导入成功！");
+            location.reload(); // 可选：刷新页面以加载新数据
+          });
+        } catch (err) {
+          alert("导入失败，文件格式不正确！");
+        }
+      };
+      reader.readAsText(file);
     }
   },
   mounted() {
