@@ -3,7 +3,12 @@
   <button @click="exportData" style="margin-left: 10px;">导出数据</button>
   <input type="file" ref="importFile" style="display:none" @change="importData" accept=".json" />
   <button @click="triggerImport" style="margin-left: 10px;">导入数据</button>
-  <h2>整体温度数据</h2>
+  <h2>
+    整体温度数据
+    <span v-if="haomaiDate" style="font-size:14px;color:#888;margin-left:10px;">
+      ({{ haomaiDate }})
+    </span>
+  </h2>
   <table>
     <thead>
       <tr>
@@ -203,7 +208,8 @@ export default {
         ],
       shouldHighlight2019: false,
       shouldHighlight2024: false,
-      todayTempValue: 0
+      todayTempValue: 0,
+      haomaiDate: '' // 新增
     }
   },
   methods: {
@@ -344,7 +350,7 @@ export default {
     }
   },
   mounted() {
-    chrome.storage.local.get(['todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData','all_pe_data'], (result) => {
+    chrome.storage.local.get(['todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData','all_pe_data', 'haomai_date'], (result) => {
       console.log('读取到的indexData:', result.indexData);
       console.log('读取到的pe_values:', result.all_pe_data);
       let arr = [];
@@ -415,6 +421,9 @@ export default {
         const targetDate2024 = '2024-2-5';
         const targetTemp2024 = parseFloat(this.temperatureData[0][targetDate2024]) || 0;
         this.shouldHighlight2024 = this.todayTempValue <= targetTemp2024;
+      }
+      if (result.haomai_date) {
+        this.haomaiDate = result.haomai_date;
       }
     });
   }
