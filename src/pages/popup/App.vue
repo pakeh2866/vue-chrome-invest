@@ -337,6 +337,7 @@ export default {
     }
   },
   methods: {
+    // 编辑指数，弹出编辑模态框并填充数据
     editIndex(index) {
       const item = this.indexData[index];
   this.newIndexData = {
@@ -349,6 +350,8 @@ export default {
       this.isEditing = true;
       this.currentEditIndex = index;
     },
+
+    // 删除某条指数数据
     deleteIndex(index) {
       if (confirm('确定要删除这条指数数据吗？')) {
         this.indexData.splice(index, 1);
@@ -357,9 +360,13 @@ export default {
         });
       }
     },
+
+    // 新增指数，弹出新增模态框
     addIndex() {
       this.showAddIndexModal = true;
     },
+
+    // 保存指数（新增或编辑后）
     saveIndex() {
       // 验证必填字段
       if (!this.newIndexData.name || !this.newIndexData.code) {
@@ -402,10 +409,14 @@ export default {
       this.resetForm();
       this.showAddIndexModal = false;
     },
+
+    // 取消新增/编辑指数，重置表单
     cancelAddIndex() {
       this.resetForm();
       this.showAddIndexModal = false;
     },
+
+    // 重置指数表单
     resetForm() {
       this.newIndexData = {
         name: '',
@@ -423,20 +434,28 @@ export default {
         cheeseUrl: ''
       };
     },
+
+    // 计算距离支撑位的百分比
     calculateDistanceToSupport() {
       // 简单计算距离支撑位的百分比
       return this.newIndexData.supportLevel ? '0%' : 'N/A';
     },
+
+    // 一键打开目标网站
     fetchData() {
       this.targetUrls.forEach(url => {
         window.open(url, '_blank');
       });
     },
+
+    // 跳转到芝士数据页面
     onCheeseDataClick(item) {
       // 这里可以自定义跳转或弹窗等逻辑
       const url = item.cheeseUrl && item.cheeseUrl.trim() ? item.cheeseUrl : 'https://stock.cheesefortune.com/';
       window.open(url, '_blank');
     },
+
+    // 导出所有本地存储数据为JSON文件
     exportData() {
       // 读取所有本地存储数据
       chrome.storage.local.get(null, (result) => {
@@ -452,9 +471,13 @@ export default {
         URL.revokeObjectURL(url);
       });
     },
+
+    // 触发导入文件选择
     triggerImport() {
       this.$refs.importFile.click();
     },
+
+    // 导入本地JSON数据并写入storage
     importData(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -472,6 +495,8 @@ export default {
       };
       reader.readAsText(file);
     },
+
+    // 新增持仓，保存到本地storage
     savePosition() {
       // 校验必填项
       if (!this.newPosition.code || !this.newPosition.name) {
@@ -495,6 +520,8 @@ export default {
         price: 0
       };
     },
+
+    // 删除某条持仓
     deletePosition(idx) {
       this.positions.splice(idx, 1);
       chrome.storage.local.set({ positions: this.positions }, () => {
