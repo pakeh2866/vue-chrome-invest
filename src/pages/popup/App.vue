@@ -88,6 +88,28 @@
       </tbody>
     </table>
 
+    <!-- 新增持仓表格 -->
+    <h2 style="margin-top: 30px;">持仓表格</h2>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>分类</th>
+          <th>股票代码</th>
+          <th>股票名称</th>
+          <th>持仓数量</th>
+          <th>持仓价格</th>
+          <th>现价</th>
+          <th>持仓价值</th>
+          <th>持仓比例</th>
+          <th>建议仓位</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 这里可以添加表体内容，如：<tr><td>示例</td><td>000001</td></tr> -->
+      </tbody>
+    </table>
+
     <!-- 新增指数模态框 -->
     <div v-if="showAddIndexModal" class="modal-overlay">
       <div class="modal-content">
