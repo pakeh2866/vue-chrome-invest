@@ -89,7 +89,10 @@
     </table>
 
     <!-- 新增持仓表格 -->
-    <h2 style="margin-top: 30px;">持仓表格</h2>
+    <div style="display: flex; align-items: center; margin-top: 30px;">
+      <h2 style="margin-right: 10px;">持仓表格</h2>
+      <button @click="showAddPositionModal = true">增加持仓</button>
+    </div>
     <table class="data-table">
       <thead>
         <tr>
@@ -106,7 +109,21 @@
         </tr>
       </thead>
       <tbody>
-        <!-- 这里可以添加表体内容，如：<tr><td>示例</td><td>000001</td></tr> -->
+        <tr v-for="(item, idx) in positions" :key="idx">
+          <td>{{ item.category }}<span v-if="item.subCategory">-{{ item.subCategory }}</span></td>
+          <td>{{ item.code }}</td>
+          <td>{{ item.name }}</td>
+          <td>{{ item.amount }}</td>
+          <td>{{ item.price }}</td>
+          <td>--</td> <!-- 现价：如需可后续补充 -->
+          <td>{{ (item.amount * item.price).toFixed(2) }}</td> <!-- 持仓价值 -->
+          <td>--</td> <!-- 持仓比例：如需可后续补充 -->
+          <td>--</td> <!-- 建议仓位：如需可后续补充 -->
+          <td>
+            <!-- 可加删除/编辑按钮 -->
+            <button @click="deletePosition(idx)">删除</button>
+          </td>
+        </tr>
       </tbody>
     </table>
 
@@ -174,6 +191,49 @@
         </div>
       </div>
     </div>
+
+    <!-- 持仓新增弹窗 -->
+    <div v-if="showAddPositionModal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>新增持仓</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>分类</label>
+            <select v-model="newPosition.category">
+              <option value="" disabled>请选择大类</option>
+              <option v-for="cat in categoryOptions" :key="cat.label" :value="cat.label">{{ cat.label }}</option>
+            </select>
+          </div>
+          <div class="form-group" v-if="newPosition.category">
+            <label>子分类</label>
+            <select v-model="newPosition.subCategory">
+              <option value="" disabled>请选择子类</option>
+              <option v-for="sub in (categoryOptions.find(c => c.label === newPosition.category)?.children || [])" :key="sub.value" :value="sub.value">{{ sub.label }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>股票代码</label>
+            <input v-model="newPosition.code" type="text" placeholder="输入股票代码">
+          </div>
+          <div class="form-group">
+            <label>股票名称</label>
+            <input v-model="newPosition.name" type="text" placeholder="输入股票名称">
+          </div>
+          <div class="form-group">
+            <label>持仓数量</label>
+            <input v-model.number="newPosition.amount" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>持仓价格</label>
+            <input v-model.number="newPosition.price" type="number" placeholder="0">
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button @click="showAddPositionModal = false" class="cancel-btn">取消</button>
+          <button @click="savePosition" class="save-btn">保存</button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script>
@@ -231,7 +291,49 @@ export default {
       shouldHighlight2019: false,
       shouldHighlight2024: false,
       todayTempValue: 0,
-      haomaiDate: '' // 新增
+      haomaiDate: '', // 新增
+      showAddPositionModal: false,
+      newPosition: {
+        category: '',
+        subCategory: '', // 新增：二级分类
+        code: '',
+        name: '',
+        amount: 0,
+        price: 0
+      },
+      positions: [], // 新增：持仓数据数组
+      categoryOptions: [
+        {
+          label: '权益类',
+          children: [
+            { label: 'A股个股', value: 'A股个股' },
+            { label: 'A股ETF', value: 'A股ETF' },
+            { label: '港股ETF', value: '港股ETF' },
+            { label: '海外ETF', value: '海外ETF' }
+          ]
+        },
+        {
+          label: '债券类',
+          children: [
+            { label: '可转债', value: '可转债' },
+            { label: '债券ETF', value: '债券ETF' }
+          ]
+        },
+        {
+          label: '商品类',
+          children: [
+            { label: '原油', value: '原油' },
+            { label: '黄金', value: '黄金' },
+            { label: '其他', value: '其他' }
+          ]
+        },
+        {
+          label: '现金',
+          children: [
+            { label: '现金', value: '现金' }
+          ]
+        }
+      ]
     }
   },
   methods: {
@@ -369,10 +471,41 @@ export default {
         }
       };
       reader.readAsText(file);
+    },
+    savePosition() {
+      // 校验必填项
+      if (!this.newPosition.code || !this.newPosition.name) {
+        alert('股票代码和名称为必填项');
+        return;
+      }
+      // 添加到持仓数组
+      this.positions.push({ ...this.newPosition });
+      // 保存到本地
+      chrome.storage.local.set({ positions: this.positions }, () => {
+        console.log('持仓数据已保存');
+      });
+      // 重置表单并关闭弹窗
+      this.showAddPositionModal = false;
+      this.newPosition = {
+        category: '',
+        subCategory: '', // 新增：二级分类
+        code: '',
+        name: '',
+        amount: 0,
+        price: 0
+      };
+    },
+    deletePosition(idx) {
+      this.positions.splice(idx, 1);
+      chrome.storage.local.set({ positions: this.positions }, () => {
+        console.log('持仓已删除');
+      });
     }
   },
   mounted() {
-    chrome.storage.local.get(['todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData','all_pe_data', 'haomai_date'], (result) => {
+    chrome.storage.local.get([
+      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions'
+    ], (result) => {
       console.log('读取到的indexData:', result.indexData);
       console.log('读取到的pe_values:', result.all_pe_data);
       let arr = [];
@@ -447,6 +580,14 @@ export default {
       if (result.haomai_date) {
         this.haomaiDate = result.haomai_date;
       }
+      if (Array.isArray(result.positions)) {
+        this.positions = result.positions;
+      } else if (typeof result.positions === 'object' && result.positions !== null) {
+        this.positions = Object.values(result.positions);
+      } else {
+        this.positions = [];
+      }
+      console.log('storage.positions:', this.positions);
     });
   }
 }
