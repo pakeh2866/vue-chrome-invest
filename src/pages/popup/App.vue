@@ -120,8 +120,11 @@
           <td>--</td> <!-- 持仓比例：如需可后续补充 -->
           <td>--</td> <!-- 建议仓位：如需可后续补充 -->
           <td>
-            <!-- 可加删除/编辑按钮 -->
-            <button @click="deletePosition(idx)">删除</button>
+            <!-- 新增编辑按钮 -->
+            <div style="display: flex; gap: 6px;">
+              <button @click="editPosition(idx)">编辑</button>
+              <button @click="deletePosition(idx)">删除</button>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -333,7 +336,9 @@ export default {
             { label: '现金', value: '现金' }
           ]
         }
-      ]
+      ],
+      isEditingPosition: false,
+      currentEditPositionIndex: -1
     }
   },
   methods: {
@@ -503,8 +508,15 @@ export default {
         alert('股票代码和名称为必填项');
         return;
       }
-      // 添加到持仓数组
-      this.positions.push({ ...this.newPosition });
+      if (this.isEditingPosition) {
+        // 编辑模式，更新对应项
+        this.positions.splice(this.currentEditPositionIndex, 1, { ...this.newPosition });
+        this.isEditingPosition = false;
+        this.currentEditPositionIndex = -1;
+      } else {
+        // 新增模式
+        this.positions.push({ ...this.newPosition });
+      }
       // 保存到本地
       chrome.storage.local.set({ positions: this.positions }, () => {
         console.log('持仓数据已保存');
@@ -527,6 +539,15 @@ export default {
       chrome.storage.local.set({ positions: this.positions }, () => {
         console.log('持仓已删除');
       });
+    },
+
+    // 编辑持仓，弹出编辑模态框并填充数据
+    editPosition(idx) {
+      const item = this.positions[idx];
+      this.newPosition = { ...item };
+      this.showAddPositionModal = true;
+      this.isEditingPosition = true;
+      this.currentEditPositionIndex = idx;
     }
   },
   mounted() {
