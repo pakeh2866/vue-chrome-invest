@@ -92,6 +92,7 @@
     <div style="display: flex; align-items: center; margin-top: 30px;">
       <h2 style="margin-right: 10px;">持仓表格</h2>
       <button @click="showAddPositionModal = true">增加持仓</button>
+      <button @click="updateMarket" style="margin-left: 10px;">更新行情</button>
     </div>
     <table class="data-table">
       <thead>
@@ -115,8 +116,8 @@
           <td>{{ item.name }}</td>
           <td>{{ item.amount }}</td>
           <td>{{ item.price }}</td>
-          <td>--</td> <!-- 现价：如需可后续补充 -->
-          <td>{{ (item.amount * item.price).toFixed(2) }}</td> <!-- 持仓价值 -->
+          <td>{{ item.currentPrice || '--' }}</td> <!-- 现价：如需可后续补充 -->
+          <td>{{ (item.amount * (item.currentPrice || 0)).toFixed(2) }}</td> <!-- 持仓价值 -->
           <td>--</td> <!-- 持仓比例：如需可后续补充 -->
           <td>--</td> <!-- 建议仓位：如需可后续补充 -->
           <td>
@@ -548,7 +549,68 @@ export default {
       this.showAddPositionModal = true;
       this.isEditingPosition = true;
       this.currentEditPositionIndex = idx;
-    }
+    },
+
+    // 更新行情（持仓和指数）
+    async updateMarket() {
+      try {
+        // 1. 获取所有股票和指数的代码
+        const stockCodes = this.positions.map(stock => stock.code.trim());
+        const indexCodes = this.indexData.map(idx => idx.code.trim());
+        // 合并去重
+        const allCodes = Array.from(new Set([...stockCodes, ...indexCodes])).filter(Boolean);
+        console.log('allCodes:', allCodes);
+        if (allCodes.length === 0) {
+          alert('没有有效的股票或指数代码可供查询。');
+          return;
+        }
+
+        // 2. 请求行情（腾讯接口，A股需加前缀如 sh000001、sz000001）
+        // 你可以根据实际情况调整前缀
+        const querySymbols = allCodes.join(',');
+        const response = await fetch(`https://qt.gtimg.cn/q=${querySymbols}`);
+        const text = await response.text();
+
+        // 3. 解析返回数据
+        const individualStockData = text.trim().split(';').filter(s => s.length > 0);
+        individualStockData.forEach(stockStr => {
+          const fields = stockStr.split('~');
+          if (fields.length > 3) {
+            const currentPriceStr = fields[3];
+            const currentPrice = parseFloat(currentPriceStr);
+            const code = fields[2]; // 股票代码在第三个字段
+
+            // 4. 更新持仓股票
+            const stock = this.positions.find(s => s.code.includes(code));
+            if (stock && !isNaN(currentPrice)) {
+              stock.currentPrice = currentPrice;
+              stock.value = stock.amount * currentPrice;
+            }
+
+            // 5. 更新指数点位
+            const idx = this.indexData.find(i => i.code.includes(code));
+            if (idx && !isNaN(currentPrice)) {
+              idx.currentIndexPoint = currentPrice;
+              // 获取市盈率
+              const peField = fields[39]; // 腾讯接口的市盈率字段
+              if (peField && peField !== '-') {
+                idx.currentPE = parseFloat(peField);
+              } else {
+                idx.currentPE = null;
+              }
+            }
+          }
+        });
+
+        // 6. 保存到本地
+        chrome.storage.local.set({ positions: this.positions, indexData: this.indexData }, () => {
+          alert('股票和指数数据更新完成！');
+        });
+      } catch (error) {
+        console.error('获取股票数据失败:', error);
+        alert('获取股票数据失败，请稍后重试！');
+      }
+    },
   },
   mounted() {
     chrome.storage.local.get([
