@@ -57,6 +57,7 @@
           <th>正常区间上沿</th>
           <th>压力位</th>
           <th>现市盈率</th>
+          <th>历史百分位</th>
           <th>建议仓位</th>
           <th>操作</th>
         </tr>
@@ -78,9 +79,10 @@
           <td>{{ item.normalRangeUpper }}</td>
           <td>{{ item.pressureLevel }}</td>
           <td>{{ item.currentPE }}</td>
+          <td>{{ item.percentile !== undefined ? item.percentile : '--' }}</td>
           <td>{{ item.suggestedPosition }}</td>
           <td class="action-buttons">
-            <button @click="onCheeseDataClick(item)">芝士数据</button>
+            <button @click="onCheeseDataClick(item)">芝士</button>
             <button @click="editIndex(index)">编辑</button>
             <button @click="deleteIndex(index)">删除</button>
           </td>
