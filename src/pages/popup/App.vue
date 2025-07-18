@@ -116,9 +116,14 @@
           <td>{{ item.name }}</td>
           <td>{{ item.amount }}</td>
           <td>{{ item.price }}</td>
-          <td>{{ item.currentPrice || '--' }}</td> <!-- 现价：如需可后续补充 -->
-          <td>{{ (item.amount * (item.currentPrice || 0)).toFixed(2) }}</td> <!-- 持仓价值 -->
-          <td>--</td> <!-- 持仓比例：如需可后续补充 -->
+          <td>{{ item.category === '现金' ? 1 : (item.currentPrice || '--') }}</td> <!-- 现价：现金固定为1 -->
+          <td>{{ (item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))).toFixed(2) }}</td> <!-- 持仓价值：现金现价为1 -->
+          <td>
+            <span v-if="totalPositionValue > 0">
+              {{ ((item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))) / totalPositionValue * 100).toFixed(2) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
           <td>--</td> <!-- 建议仓位：如需可后续补充 -->
           <td>
             <!-- 新增编辑按钮 -->
@@ -339,7 +344,8 @@ export default {
         }
       ],
       isEditingPosition: false,
-      currentEditPositionIndex: -1
+      currentEditPositionIndex: -1,
+      totalPositionValue: 0, // 新增：总持仓价值
     }
   },
   methods: {
@@ -699,6 +705,13 @@ export default {
       }
       console.log('storage.positions:', this.positions);
     });
+    this.$watch(
+      () => this.positions.map(item => item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))),
+      (values) => {
+        this.totalPositionValue = values.reduce((sum, v) => sum + v, 0);
+      },
+      { immediate: true, deep: true }
+    );
   }
 }
 </script>
