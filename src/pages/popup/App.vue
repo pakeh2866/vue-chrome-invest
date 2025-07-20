@@ -66,7 +66,9 @@
         <tr v-for="(item, index) in indexData" :key="index">
           <td>{{ item.name }}</td>
           <td>{{ item.code }}</td>
-          <td>{{ item.currentIndexPoint }}</td>
+          <td :style="{ backgroundColor: getIndexColor(item), color: (getIndexColor(item) === '#006400' || getIndexColor(item) === '#ff4d4f') ? '#fff' : '#000' }">
+            {{ item.currentIndexPoint }}
+          </td>
           <td>{{ item.supportLevel }}</td>
           <td>{{ item.distanceToSupport }}</td>
           <td>{{ item.recentLowest }}</td>
@@ -89,6 +91,13 @@
         </tr>
       </tbody>
     </table>
+    <div style="margin: 10px 0;">
+      <span style="background:#006400;color:#fff;padding:2px 8px;">极度价值</span>
+      <span style="background:#90ee90;padding:2px 8px;">价值区间</span>
+      <span style="background:#ffe066;padding:2px 8px;">正常区间</span>
+      <span style="background:#ffa940;padding:2px 8px;">接近压力位</span>
+      <span style="background:#ff4d4f;color:#fff;padding:2px 8px;">压力位以上</span>
+    </div>
 
     <!-- 新增持仓表格 -->
     <div style="display: flex; align-items: center; margin-top: 30px;">
@@ -619,6 +628,24 @@ export default {
         alert('获取股票数据失败，请稍后重试！');
       }
     },
+
+    // 判断现指数点位区间并返回对应颜色
+    getIndexColor(item) {
+      const v = Number(item.currentIndexPoint);
+      const extreme = Number(item.extremeValue);
+      const valueLow = Number(item.valueRangeLower);
+      const valueHigh = Number(item.valueRangeUpper);
+      const normalLow = Number(item.normalRangeLower);
+      const normalHigh = Number(item.normalRangeUpper);
+      const pressure = Number(item.pressureLevel);
+      if (!v || isNaN(v)) return '';
+      if (!isNaN(extreme) && v <= extreme) return '#006400'; // 极度价值
+      if (!isNaN(valueLow) && !isNaN(valueHigh) && v > extreme && v <= valueHigh) return '#90ee90'; // 价值区间
+      if (!isNaN(normalLow) && !isNaN(normalHigh) && v > valueHigh && v <= normalHigh) return '#ffe066'; // 正常区间
+      if (!isNaN(pressure) && v > normalHigh && v <= pressure) return '#ffa940'; // 接近压力位
+      if (!isNaN(pressure) && v > pressure) return '#ff4d4f'; // 超过压力位
+      return '';
+    },
   },
   mounted() {
     chrome.storage.local.get([
@@ -640,10 +667,10 @@ export default {
         }
         return item;
       });
-      this.temperatureData[1].temperature = result['haomai_today-temp'] ? `${result['haomai_today-temp']}°` : 'N/A';
+      this.temperatureData[1].temperature = result['haomai_today-temp'] ? `${result['haomai_today-temp']}` : 'N/A';
         if (result.todayTemp) {
           this.todayTempValue = parseFloat(result.todayTemp);
-          this.temperatureData[0].temperature = `${result.todayTemp}°`;
+          this.temperatureData[0].temperature = `${result.todayTemp}`;
         if (result.dateDegreeDB) {
           const todayTempValue = parseFloat(result.todayTemp);
           const degreeValues = result.dateDegreeDB.map(item => parseFloat(item.degree));
@@ -672,7 +699,7 @@ export default {
               return year === targetYear && month === targetMonth && day === targetDay;
             });
           if (record) {
-            this.temperatureData[0][date] = `${record.degree}°`;
+            this.temperatureData[0][date] = `${record.degree}`;
             this.temperatureData[0][`${date}_isNext`] = false;
           } else {
             const targetDate = new Date(date.replace(/\./g, '-'));
@@ -680,7 +707,7 @@ export default {
               return new Date(item.date.replace(/\./g, '-')) > targetDate;
             });
             if (nextRecord) {
-              this.temperatureData[0][date] = `${nextRecord.degree}°`;
+              this.temperatureData[0][date] = `${nextRecord.degree}`;
               this.temperatureData[0][`${date}_isNext`] = true;
             }
           }
