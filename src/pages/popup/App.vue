@@ -48,7 +48,8 @@
           <th>支撑点位</th>
           <th>距离支撑</th>
           <th>近年最低</th>
-          <th>已反弹高</th>
+          <th>已反弹</th>
+          <th>前高</th>
           <th>最大跌幅</th>
           <th>极度价值</th>
           <th>价值区间下沿</th>
@@ -70,9 +71,20 @@
             {{ item.currentIndexPoint }}
           </td>
           <td>{{ item.supportLevel }}</td>
-          <td>{{ item.distanceToSupport }}</td>
+          <td>
+            <span v-if="item.currentIndexPoint && item.supportLevel && item.supportLevel != 0">
+              {{ (((item.currentIndexPoint - item.supportLevel) / item.supportLevel) * 100).toFixed(2) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
           <td>{{ item.recentLowest }}</td>
-          <td>{{ item.reboundHigh }}</td>
+          <td>
+            <span v-if="item.currentIndexPoint && item.recentLowest && item.recentLowest != 0">
+              {{ (((item.currentIndexPoint - item.recentLowest) / item.recentLowest) * 100).toFixed(2) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td>{{ item.previousHigh }}</td>
           <td>{{ item.maxDrawdown }}</td>
           <td>{{ item.extremeValue }}</td>
           <td>{{ item.valueRangeLower }}</td>
@@ -171,6 +183,10 @@
           <div class="form-group">
             <label>近两年最低</label>
             <input v-model.number="newIndexData.twoYearLow" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>已反弹</label>
+            <input v-model.number="newIndexData.reboundHigh" type="number" placeholder="0">
           </div>
           <div class="form-group">
             <label>前高</label>
@@ -285,7 +301,8 @@ export default {
         normalRangeLower: '',
         normalRangeUpper: '',
         pressureLevel: 0,
-        cheeseUrl: ''
+        cheeseUrl: '',
+        reboundHigh: 0
       },
       indexData: [],
       targetUrls,
@@ -403,7 +420,8 @@ export default {
           ...this.newIndexData,
           distanceToSupport: this.calculateDistanceToSupport(),
           recentLowest: this.newIndexData.twoYearLow,
-          reboundHigh: this.indexData[this.currentEditIndex].reboundHigh,
+          reboundHigh: this.newIndexData.reboundHigh,
+          previousHigh: this.newIndexData.previousHigh,
           maxDrawdown: this.indexData[this.currentEditIndex].maxDrawdown,
           currentPE: this.indexData[this.currentEditIndex].currentPE,
           suggestedPosition: this.indexData[this.currentEditIndex].suggestedPosition
@@ -416,7 +434,8 @@ export default {
           ...this.newIndexData,
           distanceToSupport: this.calculateDistanceToSupport(),
           recentLowest: this.newIndexData.twoYearLow,
-          reboundHigh: 0,
+          reboundHigh: this.newIndexData.reboundHigh,
+          previousHigh: this.newIndexData.previousHigh,
           maxDrawdown: 0,
           currentPE: 0,
           suggestedPosition: '0%'
@@ -454,7 +473,8 @@ export default {
         normalRangeLower: '',
         normalRangeUpper: '',
         pressureLevel: 0,
-        cheeseUrl: ''
+        cheeseUrl: '',
+        reboundHigh: 0
       };
     },
 
