@@ -59,6 +59,8 @@
           <th>压力位</th>
           <th>TX市盈率</th>
           <th>历史百分位</th>
+          <th>zs市盈率</th>
+          <th>zs百分位</th>
           <th>建议仓位</th>
           <th>操作</th>
         </tr>
@@ -96,6 +98,18 @@
           <td>
             <span v-if="item.currentPE && peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getPercentile(item.currentPE, peValuesMap[codeToPeKey(item.code)]) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td>
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getLatestPe(codeToPeKey(item.code)) }}
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td>
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getPercentile(getLatestPe(codeToPeKey(item.code)), peValuesMap[codeToPeKey(item.code)]) }}%
             </span>
             <span v-else>--</span>
           </td>
@@ -380,6 +394,7 @@ export default {
       currentEditPositionIndex: -1,
       totalPositionValue: 0, // 新增：总持仓价值
       peValuesMap: {}, // code -> pe历史数组
+      rawPeData: {}, // 新增：原始pe数据，用于获取最新pe
     }
   },
   methods: {
@@ -683,6 +698,19 @@ export default {
       }
       return ((count / sorted.length) * 100).toFixed(0);
     },
+    getLatestPe(peKey) {
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return '--';
+      // 找到日期最新的那一项
+      let latest = arr[0];
+      for (let i = 1; i < arr.length; i++) {
+        if (arr[i].date > latest.date) {
+          latest = arr[i];
+        }
+      }
+      return latest && latest.pe ? parseFloat(latest.pe) : '--';
+    },
     codeToPeKey(code) {
       if (!code) return '';
       if (code.startsWith('sh')) return code.slice(2).toUpperCase() + '.SH';
@@ -782,6 +810,10 @@ export default {
         Object.keys(result.all_pe_data).forEach(code => {
           this.peValuesMap[code] = result.all_pe_data[code].map(item => parseFloat(item.pe)).filter(v => !isNaN(v));
         });
+      }
+      // 保留原始pe数据
+      if (result.all_pe_data && typeof result.all_pe_data === 'object') {
+        this.rawPeData = result.all_pe_data;
       }
       console.log('storage.positions:', this.positions);
     });
