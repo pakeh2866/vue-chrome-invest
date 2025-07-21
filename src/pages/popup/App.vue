@@ -57,7 +57,7 @@
           <th>正常区间下沿</th>
           <th>正常区间上沿</th>
           <th>压力位</th>
-          <th>现市盈率</th>
+          <th>TX市盈率</th>
           <th>历史百分位</th>
           <th>建议仓位</th>
           <th>操作</th>
@@ -93,7 +93,12 @@
           <td>{{ item.normalRangeUpper }}</td>
           <td>{{ item.pressureLevel }}</td>
           <td>{{ item.currentPE }}</td>
-          <td>{{ item.percentile !== undefined ? item.percentile : '--' }}</td>
+          <td>
+            <span v-if="item.currentPE && peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getPercentile(item.currentPE, peValuesMap[codeToPeKey(item.code)]) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
           <td>{{ item.suggestedPosition }}</td>
           <td class="action-buttons">
             <button @click="onCheeseDataClick(item)">芝士</button>
@@ -374,6 +379,7 @@ export default {
       isEditingPosition: false,
       currentEditPositionIndex: -1,
       totalPositionValue: 0, // 新增：总持仓价值
+      peValuesMap: {}, // code -> pe历史数组
     }
   },
   methods: {
@@ -666,6 +672,24 @@ export default {
       if (!isNaN(pressure) && v > pressure) return '#ff4d4f'; // 超过压力位
       return '';
     },
+
+    // 计算百分位
+    getPercentile(currentPE, peArr) {
+      if (!Array.isArray(peArr) || peArr.length === 0) return '--';
+      const sorted = peArr.slice().sort((a, b) => a - b);
+      let count = 0;
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i] < currentPE) count++;
+      }
+      return ((count / sorted.length) * 100).toFixed(0);
+    },
+    codeToPeKey(code) {
+      if (!code) return '';
+      if (code.startsWith('sh')) return code.slice(2).toUpperCase() + '.SH';
+      if (code.startsWith('sz')) return code.slice(2).toUpperCase() + '.SZ';
+      if (code.startsWith('hk')) return code.slice(2).toUpperCase() + '.HK';
+      return code.toUpperCase();
+    }
   },
   mounted() {
     chrome.storage.local.get([
@@ -751,6 +775,13 @@ export default {
         this.positions = Object.values(result.positions);
       } else {
         this.positions = [];
+      }
+      // 处理pe历史数据
+      if (result.all_pe_data && typeof result.all_pe_data === 'object') {
+        this.peValuesMap = {};
+        Object.keys(result.all_pe_data).forEach(code => {
+          this.peValuesMap[code] = result.all_pe_data[code].map(item => parseFloat(item.pe)).filter(v => !isNaN(v));
+        });
       }
       console.log('storage.positions:', this.positions);
     });
