@@ -87,7 +87,14 @@
             <span v-else>--</span>
           </td>
           <td>{{ item.previousHigh }}</td>
-          <td>{{ item.maxDrawdown }}</td>
+          <td
+            :style="item.currentIndexPoint && item.previousHigh && item.previousHigh != 0 && (((item.currentIndexPoint - item.previousHigh) / item.previousHigh) * 100) <= -70 ? { backgroundColor: '#90ee90' } : {}"
+          >
+            <span v-if="item.currentIndexPoint && item.previousHigh && item.previousHigh != 0">
+              {{ (((item.currentIndexPoint - item.previousHigh) / item.previousHigh) * 100).toFixed(2) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
           <td>{{ item.extremeValue }}</td>
           <td>{{ item.valueRangeLower }}</td>
           <td>{{ item.valueRangeUpper }}</td>
@@ -146,7 +153,10 @@
           <th>持仓价格</th>
           <th>现价</th>
           <th>持仓价值</th>
-          <th>持仓比例</th>
+          <th @click="togglePositionSort" style="cursor:pointer;">
+            持仓比例
+            <span v-if="positionSortByRatio">↓</span>
+          </th>
           <th>建议仓位</th>
           <th>操作</th>
         </tr>
@@ -395,6 +405,8 @@ export default {
       totalPositionValue: 0, // 新增：总持仓价值
       peValuesMap: {}, // code -> pe历史数组
       rawPeData: {}, // 新增：原始pe数据，用于获取最新pe
+      positionSortByRatio: false, // 是否按持仓比例排序
+      originalPositions: [],      // 保存原始顺序
     }
   },
   methods: {
@@ -590,6 +602,7 @@ export default {
         amount: 0,
         price: 0
       };
+      this.originalPositions = this.positions.slice(); // 新增：保存原始顺序
     },
 
     // 删除某条持仓
@@ -598,6 +611,7 @@ export default {
       chrome.storage.local.set({ positions: this.positions }, () => {
         console.log('持仓已删除');
       });
+      this.originalPositions = this.positions.slice(); // 新增：保存原始顺序
     },
 
     // 编辑持仓，弹出编辑模态框并填充数据
@@ -717,11 +731,27 @@ export default {
       if (code.startsWith('sz')) return code.slice(2).toUpperCase() + '.SZ';
       if (code.startsWith('hk')) return code.slice(2).toUpperCase() + '.HK';
       return code.toUpperCase();
+    },
+    togglePositionSort() {
+      this.positionSortByRatio = !this.positionSortByRatio;
+      // 保存到本地
+      chrome.storage.local.set({ positionSortByRatio: this.positionSortByRatio });
+      if (this.positionSortByRatio) {
+        // 按持仓比例从大到小排序
+        this.positions.sort((a, b) => {
+          const aValue = a.amount * (a.category === '现金' ? 1 : (a.currentPrice || 0));
+          const bValue = b.amount * (b.category === '现金' ? 1 : (b.currentPrice || 0));
+          return bValue - aValue;
+        });
+      } else {
+        // 恢复原始顺序
+        this.positions = this.originalPositions.slice();
+      }
     }
   },
   mounted() {
     chrome.storage.local.get([
-      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions'
+      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio'
     ], (result) => {
       console.log('读取到的indexData:', result.indexData);
       console.log('读取到的pe_values:', result.all_pe_data);
@@ -816,6 +846,22 @@ export default {
         this.rawPeData = result.all_pe_data;
       }
       console.log('storage.positions:', this.positions);
+      // 保存原始顺序
+      this.originalPositions = this.positions.slice();
+
+      // 恢复排序状态
+      if (result.positionSortByRatio) {
+        this.positionSortByRatio = true;
+        // 只排序，不反转
+        this.positions.sort((a, b) => {
+          const aValue = a.amount * (a.category === '现金' ? 1 : (a.currentPrice || 0));
+          const bValue = b.amount * (b.category === '现金' ? 1 : (b.currentPrice || 0));
+          return bValue - aValue;
+        });
+      } else {
+        this.positionSortByRatio = false;
+        this.positions = this.originalPositions.slice();
+      }
     });
     this.$watch(
       () => this.positions.map(item => item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))),
