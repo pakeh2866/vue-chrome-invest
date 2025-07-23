@@ -140,8 +140,14 @@
     <!-- 新增持仓表格 -->
     <div style="display: flex; align-items: center; margin-top: 30px;">
       <h2 style="margin-right: 10px;">持仓表格</h2>
-      <button @click="showAddPositionModal = true">增加持仓</button>
-      <button @click="updateMarket" style="margin-left: 10px;">更新行情</button>
+      <!-- 总持仓金额显示 -->
+      <div style="font-weight: bold; font-size: 15px; margin-right: 20px;">
+        总持仓金额：{{ totalPositionValue.toFixed(2) }}
+      </div>
+      <div style="margin-left: auto;">
+        <button @click="showAddPositionModal = true">增加持仓</button>
+        <button @click="updateMarket" style="margin-left: 10px;">更新行情</button>
+      </div>
     </div>
     <table class="data-table">
       <thead>
