@@ -876,6 +876,12 @@ export default {
       },
       { immediate: true, deep: true }
     );
+    
+    // 页面加载完成后自动更新行情
+    // 延迟2秒执行，确保数据加载完成
+    setTimeout(() => {
+      this.updateMarket();
+    }, 2000);
   }
 }
 </script>
