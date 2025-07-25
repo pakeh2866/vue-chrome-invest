@@ -8,6 +8,9 @@
     <span v-if="haomaiDate" style="font-size:14px;color:#888;margin-left:10px;">
       ({{ haomaiDate }})
     </span>
+    <span style="font-size:14px;color:#888;margin-left:10px;">
+      建议A+H仓位：{{ suggestedPositionAH }}
+    </span>
   </h2>
   <table>
     <thead>
@@ -776,9 +779,9 @@ export default {
         return item;
       });
       this.temperatureData[1].temperature = result['haomai_today-temp'] ? `${result['haomai_today-temp']}` : 'N/A';
-        if (result.todayTemp) {
-          this.todayTempValue = parseFloat(result.todayTemp);
-          this.temperatureData[0].temperature = `${result.todayTemp}`;
+      if (result.todayTemp) {
+        this.todayTempValue = parseFloat(result.todayTemp);
+        this.temperatureData[0].temperature = `${result.todayTemp}`;
         if (result.dateDegreeDB) {
           const todayTempValue = parseFloat(result.todayTemp);
           const degreeValues = result.dateDegreeDB.map(item => parseFloat(item.degree));
@@ -795,17 +798,17 @@ export default {
         const dates = ['2015-6-12', '2019-1-2', '2021-2-19', '2022-4-26', '2022-10-31', '2024-2-5', '2024-9-13'];
         dates.forEach((date) => {
           const targetDate = new Date(date);
-            const targetYear = targetDate.getFullYear();
-            const targetMonth = targetDate.getMonth();
-            const targetDay = targetDate.getDate();
-            const record = sortedData.find(item => {
-              const match = item.date.match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
-              if (!match) return false;
-              const year = parseInt(match[1], 10);
-              const month = parseInt(match[2], 10) - 1; // 转换为0-11
-              const day = parseInt(match[3], 10);
-              return year === targetYear && month === targetMonth && day === targetDay;
-            });
+          const targetYear = targetDate.getFullYear();
+          const targetMonth = targetDate.getMonth();
+          const targetDay = targetDate.getDate();
+          const record = sortedData.find(item => {
+            const match = item.date.match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+            if (!match) return false;
+            const year = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1; // 转换为0-11
+            const day = parseInt(match[3], 10);
+            return year === targetYear && month === targetMonth && day === targetDay;
+          });
           if (record) {
             this.temperatureData[0][date] = `${record.degree}`;
             this.temperatureData[0][`${date}_isNext`] = false;
@@ -882,6 +885,54 @@ export default {
     setTimeout(() => {
       this.updateMarket();
     }, 2000);
+  },
+  computed: {
+    suggestedPositionAH() {
+      try {
+        // 检查数据是否已加载
+        if (!this.temperatureData || this.temperatureData.length < 2) {
+          console.log('温度数据尚未加载');
+          return 'N/A';
+        }
+        
+        // 获取有知有行数据和好买温度
+        const youzhiyouxingData = this.temperatureData[0]; // 有知有行数据
+        const haomaiData = this.temperatureData[1]; // 好买温度
+        
+        // 检查数据对象是否存在
+        if (!youzhiyouxingData || !haomaiData) {
+          console.log('温度数据对象不存在');
+          return 'N/A';
+        }
+        
+        // 获取今日温度值
+        const youzhiyouxingTemp = parseFloat(youzhiyouxingData.temperature);
+        const haomaiTemp = parseFloat(haomaiData.temperature);
+        
+        // 调试信息
+        console.log('有知有行温度:', youzhiyouxingData.temperature, '转换后:', youzhiyouxingTemp);
+        console.log('好买温度:', haomaiData.temperature, '转换后:', haomaiTemp);
+        
+        // 检查数据是否有效
+        if (isNaN(youzhiyouxingTemp) || isNaN(haomaiTemp)) {
+          console.log('温度数据无效，返回N/A');
+          return 'N/A';
+        }
+        
+        // 计算建议仓位：1 - (有知有行数据 + 好买温度) / 2
+        const suggestedPosition = 1 - (youzhiyouxingTemp + haomaiTemp) / 200;
+        
+        // 限制结果在0-1之间
+        const finalPosition = Math.max(0, Math.min(1, suggestedPosition));
+        console.log('计算结果:', finalPosition);
+        
+        // 转换为百分比显示
+        return (finalPosition * 100).toFixed(0) + '%';
+      } catch (error) {
+        console.error('计算建议仓位时出错:', error);
+        return 'N/A';
+      }
+    }
   }
 }
 </script>
