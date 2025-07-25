@@ -9,8 +9,8 @@
       ({{ haomaiDate }})
     </span>
     <span style="font-size:14px;color:#888;margin-left:10px;cursor:pointer;text-decoration:underline;" @click="showPositionLogicModal = true">
-      建议A+H仓位：{{ suggestedPositionAH }}
-    </span>
+     建议A股仓位：{{ suggestedPositionAH }}
+   </span>
   </h2>
   <table>
     <thead>
@@ -328,9 +328,9 @@
     
     <!-- 建议仓位逻辑说明模态框 -->
     <div v-if="showPositionLogicModal" class="modal-overlay">
-      <div class="modal-content" style="width: 500px;">
-        <h3>建议A+H仓位计算逻辑</h3>
-        <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+     <div class="modal-content" style="width: 500px;">
+       <h3>建议A股仓位计算逻辑</h3>
+       <div style="text-align: left; font-size: 14px; line-height: 1.6;">
           <p><strong>计算公式：</strong></p>
           <p>建议仓位 = 1 - (有知有行温度 + 好买温度) / 200</p>
           <br>
