@@ -101,8 +101,12 @@
           <td :style="{ backgroundColor: item.currentIndexPoint && item.extremeValue && item.currentIndexPoint < item.extremeValue ? '#006400' : '', color: item.currentIndexPoint && item.extremeValue && item.currentIndexPoint < item.extremeValue ? '#fff' : '' }">
             {{ item.extremeValue }}
           </td>
-          <td>{{ item.valueRangeLower }}</td>
-          <td>{{ item.valueRangeUpper }}</td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#90ee90' : '', color: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#000' : '' }">
+            {{ item.valueRangeLower }}
+          </td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#90ee90' : '', color: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#000' : '' }">
+            {{ item.valueRangeUpper }}
+          </td>
           <td>{{ item.normalRangeLower }}</td>
           <td>{{ item.normalRangeUpper }}</td>
           <td>{{ item.pressureLevel }}</td>
