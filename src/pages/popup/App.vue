@@ -98,7 +98,9 @@
             </span>
             <span v-else>--</span>
           </td>
-          <td>{{ item.extremeValue }}</td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.extremeValue && item.currentIndexPoint < item.extremeValue ? '#006400' : '', color: item.currentIndexPoint && item.extremeValue && item.currentIndexPoint < item.extremeValue ? '#fff' : '' }">
+            {{ item.extremeValue }}
+          </td>
           <td>{{ item.valueRangeLower }}</td>
           <td>{{ item.valueRangeUpper }}</td>
           <td>{{ item.normalRangeLower }}</td>
