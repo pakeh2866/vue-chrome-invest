@@ -8,7 +8,7 @@
     <span v-if="haomaiDate" style="font-size:14px;color:#888;margin-left:10px;">
       ({{ haomaiDate }})
     </span>
-    <span style="font-size:14px;color:#888;margin-left:10px;">
+    <span style="font-size:14px;color:#888;margin-left:10px;cursor:pointer;text-decoration:underline;" @click="showPositionLogicModal = true">
       建议A+H仓位：{{ suggestedPositionAH }}
     </span>
   </h2>
@@ -144,10 +144,27 @@
     <div style="display: flex; align-items: center; margin-top: 30px;">
       <h2 style="margin-right: 10px;">持仓表格</h2>
       <!-- 总持仓金额显示 -->
-      <div style="font-weight: bold; font-size: 15px; margin-right: 20px;">
+      <div style="font-weight: bold; font-size: 15px; margin-right: 20px; background-color: #e8f4f8; padding: 8px 12px; border-radius: 4px;">
         总持仓金额：{{ totalPositionValue.toFixed(2) }}
       </div>
-      <div style="margin-left: auto;">
+      <!-- 分类持仓比例显示 -->
+      <div style="font-size: 14px; margin-right: 20px;">
+        <div style="background-color: #f5f5f5; padding: 12px; border-radius: 6px; display: flex; gap: 30px; max-width: 600px;">
+          <div>
+            <div style="font-weight: bold; margin-bottom: 8px; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 4px;">大类分布</div>
+            <div v-for="(ratio, category) in categoryRatios" :key="category" style="margin-bottom: 5px;">
+              <span style="font-weight: bold; color: #333;">{{ category }}:</span> {{ ratio }}%
+            </div>
+          </div>
+          <div>
+            <div style="font-weight: bold; margin-bottom: 8px; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 4px;">小类分布</div>
+            <div v-for="(ratio, subCategory) in subCategoryRatios" :key="subCategory" style="margin-bottom: 3px; margin-left: 10px; color: #666;">
+              {{ subCategory }}: {{ ratio }}%
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-left: auto; display: flex; gap: 10px;">
         <button @click="showAddPositionModal = true">增加持仓</button>
         <button @click="updateMarket" style="margin-left: 10px;">更新行情</button>
       </div>
@@ -308,6 +325,32 @@
         </div>
       </div>
     </div>
+    
+    <!-- 建议仓位逻辑说明模态框 -->
+    <div v-if="showPositionLogicModal" class="modal-overlay">
+      <div class="modal-content" style="width: 500px;">
+        <h3>建议A+H仓位计算逻辑</h3>
+        <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+          <p><strong>计算公式：</strong></p>
+          <p>建议仓位 = 1 - (有知有行温度 + 好买温度) / 200</p>
+          <br>
+          <p><strong>数据来源：</strong></p>
+          <p>• 有知有行温度：{{ temperatureData[0]?.temperature || 'N/A' }}</p>
+          <p>• 好买温度：{{ temperatureData[1]?.temperature || 'N/A' }}</p>
+          <br>
+          <p><strong>计算过程：</strong></p>
+          <p v-if="temperatureData && temperatureData.length >= 2">
+            建议仓位 = 1 - ({{ parseFloat(temperatureData[0]?.temperature) || 'N/A' }} + {{ parseFloat(temperatureData[1]?.temperature) || 'N/A' }}) / 200<br>
+            = 1 - {{ (parseFloat(temperatureData[0]?.temperature) + parseFloat(temperatureData[1]?.temperature)) || 'N/A' }} / 200<br>
+            = {{ suggestedPositionAH }}<br>
+          </p>
+          <p v-else>数据尚未加载完成</p>
+        </div>
+        <div class="modal-buttons">
+          <button @click="showPositionLogicModal = false" class="save-btn">关闭</button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script>
@@ -416,6 +459,7 @@ export default {
       rawPeData: {}, // 新增：原始pe数据，用于获取最新pe
       positionSortByRatio: false, // 是否按持仓比例排序
       originalPositions: [],      // 保存原始顺序
+      showPositionLogicModal: false, // 控制显示建议仓位逻辑的模态框
     }
   },
   methods: {
@@ -932,6 +976,52 @@ export default {
         console.error('计算建议仓位时出错:', error);
         return 'N/A';
       }
+    },
+    // 计算各大类持仓比例
+    categoryRatios() {
+      const ratios = {};
+      // 初始化各大类
+      this.categoryOptions.forEach(category => {
+        ratios[category.label] = 0;
+      });
+      
+      // 计算各大类持仓价值
+      this.positions.forEach(position => {
+        const value = position.amount * (position.category === '现金' ? 1 : (position.currentPrice || 0));
+        if (ratios.hasOwnProperty(position.category)) {
+          ratios[position.category] += value;
+        }
+      });
+      
+      // 转换为百分比
+      Object.keys(ratios).forEach(key => {
+        ratios[key] = this.totalPositionValue > 0 ? ((ratios[key] / this.totalPositionValue) * 100).toFixed(2) : '0.00';
+      });
+      
+      return ratios;
+    },
+    // 计算各小类持仓比例
+    subCategoryRatios() {
+      const ratios = {};
+      
+      // 计算各小类持仓价值
+      this.positions.forEach(position => {
+        // 构造key，格式为"大类-小类"
+        const key = position.subCategory ? `${position.category}-${position.subCategory}` : position.category;
+        const value = position.amount * (position.category === '现金' ? 1 : (position.currentPrice || 0));
+        if (ratios.hasOwnProperty(key)) {
+          ratios[key] += value;
+        } else {
+          ratios[key] = value;
+        }
+      });
+      
+      // 转换为百分比
+      Object.keys(ratios).forEach(key => {
+        ratios[key] = this.totalPositionValue > 0 ? ((ratios[key] / this.totalPositionValue) * 100).toFixed(2) : '0.00';
+      });
+      
+      return ratios;
     }
   }
 }
@@ -1008,6 +1098,8 @@ export default {
   border-radius: 8px;
   width: 90%;
   max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .form-grid {
