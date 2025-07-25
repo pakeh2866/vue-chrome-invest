@@ -107,9 +107,15 @@
           <td :style="{ backgroundColor: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#90ee90' : '', color: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#000' : '' }">
             {{ item.valueRangeUpper }}
           </td>
-          <td>{{ item.normalRangeLower }}</td>
-          <td>{{ item.normalRangeUpper }}</td>
-          <td>{{ item.pressureLevel }}</td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#ffe066' : '', color: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#000' : '' }">
+            {{ item.normalRangeLower }}
+          </td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#ffe066' : '', color: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#000' : '' }">
+            {{ item.normalRangeUpper }}
+          </td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#ff4d4f' : '', color: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#fff' : '' }">
+            {{ item.pressureLevel }}
+          </td>
           <td>{{ item.currentPE }}</td>
           <td>
             <span v-if="item.currentPE && peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
