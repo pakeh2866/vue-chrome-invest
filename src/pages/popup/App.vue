@@ -168,13 +168,23 @@
           <div>
             <div style="font-weight: bold; margin-bottom: 8px; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 4px;">大类分布</div>
             <div v-for="(ratio, category) in categoryRatios" :key="category" style="margin-bottom: 5px;">
-              <span style="font-weight: bold; color: #333;">{{ category }}:</span> {{ ratio }}%
+              <span
+                :style="category === '现金' && parseFloat(ratio) > 25 ? { backgroundColor: 'red', color: 'white', padding: '0 4px', borderRadius: '2px' } : { fontWeight: 'bold', color: '#333' }"
+              >
+                {{ category }}:
+              </span>
+              <span :style="category === '现金' && parseFloat(ratio) > 25 ? { backgroundColor: 'red', color: 'white', padding: '0 4px', borderRadius: '2px' } : {}">
+                {{ ratio }}%
+              </span>
             </div>
           </div>
           <div>
             <div style="font-weight: bold; margin-bottom: 8px; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 4px;">小类分布</div>
-            <div v-for="(ratio, subCategory) in subCategoryRatios" :key="subCategory" style="margin-bottom: 3px; margin-left: 10px; color: #666;">
+            <div v-for="(ratio, subCategory) in filteredSubCategoryRatios" :key="subCategory" style="margin-bottom: 3px; margin-left: 10px; color: #666;">
               {{ subCategory }}: {{ ratio }}%
+            </div>
+            <div v-if="equityAStockRatio" style="margin-bottom: 3px; margin-left: 10px; color: #666;">
+              权益类-A股ETF+A股个股: {{ equityAStockRatio }}%
             </div>
           </div>
         </div>
@@ -1073,6 +1083,23 @@ export default {
       });
       
       return ratios;
+    },
+    // 过滤掉"现金-现金"的小类分布
+    filteredSubCategoryRatios() {
+      const filtered = {};
+      Object.keys(this.subCategoryRatios).forEach(key => {
+        // 过滤掉"现金-现金"
+        if (key !== '现金-现金') {
+          filtered[key] = this.subCategoryRatios[key];
+        }
+      });
+      return filtered;
+    },
+    // 计算权益类中A股ETF和A股个股的合计比例
+    equityAStockRatio() {
+      const aStockETF = parseFloat(this.subCategoryRatios['权益类-A股ETF']) || 0;
+      const aStock = parseFloat(this.subCategoryRatios['权益类-A股个股']) || 0;
+      return (aStockETF + aStock).toFixed(2);
     }
   }
 }
