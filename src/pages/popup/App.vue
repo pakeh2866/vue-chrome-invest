@@ -123,7 +123,10 @@
             </span>
             <span v-else>--</span>
           </td>
-          <td>
+          <td
+            @mouseenter="showTooltip($event, getLatestPeWithDate(codeToPeKey(item.code)).date)"
+            @mouseleave="hideTooltip"
+          >
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getLatestPe(codeToPeKey(item.code)) }}
             </span>
@@ -363,6 +366,10 @@
         </div>
       </div>
     </div>
+  <!-- 自定义提示框 -->
+  <div v-if="tooltip.show" class="custom-tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
+    {{ tooltip.text }}
+  </div>
 </template>
 
 <script>
@@ -381,6 +388,13 @@ export default {
       showAddIndexModal: false,
       isEditing: false,
       currentEditIndex: -1,
+      // 添加提示框相关数据
+      tooltip: {
+        show: false,
+        text: '',
+        x: 0,
+        y: 0
+      },
       newIndexData: {
         name: '',
         code: '',
@@ -778,9 +792,13 @@ export default {
       return ((count / sorted.length) * 100).toFixed(0);
     },
     getLatestPe(peKey) {
-      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      const result = this.getLatestPeWithDate(peKey);
+      return result.pe;
+    },
+    getLatestPeWithDate(peKey) {
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return { pe: '--', date: '' };
       const arr = this.rawPeData[peKey];
-      if (arr.length === 0) return '--';
+      if (arr.length === 0) return { pe: '--', date: '' };
       // 找到日期最新的那一项
       let latest = arr[0];
       for (let i = 1; i < arr.length; i++) {
@@ -788,7 +806,10 @@ export default {
           latest = arr[i];
         }
       }
-      return latest && latest.pe ? parseFloat(latest.pe) : '--';
+      return {
+        pe: latest && latest.pe ? parseFloat(latest.pe) : '--',
+        date: latest && latest.date ? latest.date : ''
+      };
     },
     codeToPeKey(code) {
       if (!code) return '';
@@ -812,6 +833,18 @@ export default {
         // 恢复原始顺序
         this.positions = this.originalPositions.slice();
       }
+    },
+    // 提示框相关方法
+    showTooltip(event, text) {
+      if (!text) return;
+      this.tooltip.show = true;
+      this.tooltip.text = text;
+      // 设置提示框位置
+      this.tooltip.x = event.clientX;
+      this.tooltip.y = event.clientY + 20; // 在鼠标下方20px
+    },
+    hideTooltip() {
+      this.tooltip.show = false;
     }
   },
   mounted() {
@@ -1172,6 +1205,18 @@ export default {
   padding: 4px 10px;
   font-size: 12px;
 }
+  /* 自定义提示框样式 */
+  .custom-tooltip {
+    position: fixed;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 9999;
+    pointer-events: none; /* 防止提示框干扰鼠标事件 */
+    white-space: nowrap;
+  }
 </style>
 
 <style lang="scss">
