@@ -815,7 +815,13 @@ export default {
       if (!code) return '';
       if (code.startsWith('sh')) return code.slice(2).toUpperCase() + '.SH';
       if (code.startsWith('sz')) return code.slice(2).toUpperCase() + '.SZ';
-      if (code.startsWith('hk')) return code.slice(2).toUpperCase() + '.HK';
+      if (code.startsWith('hk')) {
+        // 特殊处理恒生指数代码
+        if (code === 'hkHSI') {
+          return 'HSI.HI';
+        }
+        return code.slice(2).toUpperCase() + '.HK';
+      }
       return code.toUpperCase();
     },
     togglePositionSort() {
