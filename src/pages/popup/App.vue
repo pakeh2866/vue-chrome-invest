@@ -1041,7 +1041,7 @@ export default {
 
 <style scoped>
 .table-container {
-  padding: 12px;
+  padding: 8px;
   font-family: Arial, sans-serif;
 }
 
@@ -1055,7 +1055,7 @@ export default {
 
 .data-table th,
 .data-table td {
-  padding: 12px 15px;
+  padding: 8px 10px;
   text-align: left;
   border-bottom: 1px solid #e0e0e0;
 }
@@ -1064,7 +1064,7 @@ export default {
   background-color: #42b983;
   color: white;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .data-table tr:nth-child(even) {
@@ -1129,7 +1129,7 @@ export default {
 .form-group label {
   margin-bottom: 5px;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .form-group input {
@@ -1185,12 +1185,12 @@ table {
 table, th, td {
   border: 1px solid #ddd;
 }
-th, td {
-  padding: 8px;
+.th, td {
+  padding: 6px;
   text-align: left;
 }
 th {
-  padding: 10px 20px;
-  font-size: 12px;
+  padding: 8px 15px;
+  font-size: 11px;
 }
 </style>
