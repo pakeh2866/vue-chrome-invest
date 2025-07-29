@@ -183,7 +183,9 @@
             <div v-for="(ratio, subCategory) in filteredSubCategoryRatios" :key="subCategory" style="margin-bottom: 3px; margin-left: 10px; color: #666;">
               {{ subCategory }}: {{ ratio }}%
             </div>
-            <div v-if="equityAStockRatio" style="margin-bottom: 3px; margin-left: 10px; color: #666;">
+            <div v-if="equityAStockRatio"
+                 style="margin-bottom: 3px; margin-left: 10px; color: #666;"
+                 :style="shouldHighlightEquityAStock ? { backgroundColor: 'red', color: 'white', padding: '0 4px', borderRadius: '2px' } : {}">
               权益类-A股ETF+A股个股: {{ equityAStockRatio }}%
             </div>
           </div>
@@ -1405,6 +1407,13 @@ export default {
       const aStockETF = parseFloat(this.subCategoryRatios['权益类-A股ETF']) || 0;
       const aStock = parseFloat(this.subCategoryRatios['权益类-A股个股']) || 0;
       return (aStockETF + aStock).toFixed(2);
+    },
+    // 判断权益类-A股ETF+A股个股比例与建议仓位差距是否大于10%
+    shouldHighlightEquityAStock() {
+      const equityAStockRatio = parseFloat(this.equityAStockRatio) || 0;
+      const suggestedPosition = parseFloat(this.suggestedPositionAH.replace('%', '')) || 0;
+      const diff = Math.abs(equityAStockRatio - suggestedPosition);
+      return diff > 10;
     }
   }
 }
