@@ -8,7 +8,7 @@
     <span v-if="haomaiDate" style="font-size:14px;color:#888;margin-left:10px;">
       ({{ haomaiDate }})
     </span>
-    <span style="font-size:14px;color:#888;margin-left:10px;cursor:pointer;text-decoration:underline;" @click="showPositionLogicModal = true">
+    <span style="font-size:14px;color:#888;margin-left:10px;cursor:pointer;text-decoration:underline;" @click="openPositionLogicModal">
      建议A股仓位：{{ suggestedPositionAH }}
    </span>
   </h2>
@@ -373,11 +373,14 @@
           <p v-else>数据尚未加载完成</p>
           <br>
           <p><strong>温度-仓位对照表：</strong></p>
+          <div style="width: 100%; height: 300px; margin-top: 10px;">
+            <canvas id="temperaturePositionChart" width="400" height="300"></canvas>
+          </div>
           <p>点击下方按钮可编辑温度-仓位对照表</p>
           <button @click="showTemperaturePositionModal = true" style="background-color: #42b983; color: white; border: none; padding: 8px 16px; cursor: pointer; margin-top: 10px;">编辑对照表</button>
         </div>
         <div class="modal-buttons">
-          <button @click="showPositionLogicModal = false" class="save-btn">关闭</button>
+          <button @click="closePositionLogicModal" class="save-btn">关闭</button>
         </div>
       </div>
     </div>
@@ -424,6 +427,11 @@
   <div v-if="tooltip.show" class="custom-tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
     {{ tooltip.text }}
   </div>
+
+  <!-- 图表容器 -->
+  <div style="margin-top: 20px;">
+    <canvas id="myChart" width="400" height="200"></canvas>
+  </div>
 </template>
 
 <script>
@@ -435,6 +443,9 @@ const targetUrls = [
     "https://youzhiyouxing.cn/data/market", // 如果有更多，可以在这里添加
     "https://trade.ehowbuy.com/vue-newpig/tool/thermometerDetail"
 ];
+
+// 用于存储图表实例
+let temperaturePositionChart = null;
 
 export default {
   data() {
@@ -943,6 +954,11 @@ export default {
       
       // 关闭模态框
       this.showTemperaturePositionModal = false;
+      
+      // 更新图表
+      this.$nextTick(() => {
+        this.updateTemperaturePositionChart();
+      });
     },
     // 根据温度-仓位对照表进行线性插值计算
     calculatePositionFromTable(temperature) {
@@ -976,6 +992,107 @@ export default {
       
       // 如果没有找到合适的区间，返回默认值
       return 50;
+    },
+    // 初始化温度-仓位对照表图表
+    initTemperaturePositionChart() {
+      const ctx = document.getElementById('temperaturePositionChart');
+      if (!ctx) return;
+      
+      // 按温度排序数据
+      const sortedData = [...this.temperaturePositionTable].sort((a, b) => a.temperature - b.temperature);
+      const temperatures = sortedData.map(item => item.temperature);
+      const positions = sortedData.map(item => item.position);
+      
+      // 销毁之前的图表实例（如果存在）
+      if (temperaturePositionChart) {
+        temperaturePositionChart.destroy();
+      }
+      
+      // 创建新的图表实例
+      temperaturePositionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: temperatures,
+          datasets: [{
+            label: '仓位 (%)',
+            data: positions,
+            borderColor: '#42b983',
+            backgroundColor: 'rgba(66, 185, 131, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: '温度'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: '仓位 (%)'
+              },
+              min: 0,
+              max: 100
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    },
+    // 更新温度-仓位对照表图表
+    updateTemperaturePositionChart() {
+      if (!temperaturePositionChart) return;
+      
+      // 按温度排序数据
+      const sortedData = [...this.temperaturePositionTable].sort((a, b) => a.temperature - b.temperature);
+      const temperatures = sortedData.map(item => item.temperature);
+      const positions = sortedData.map(item => item.position);
+      
+      // 更新图表数据
+      temperaturePositionChart.data.labels = temperatures;
+      temperaturePositionChart.data.datasets[0].data = positions;
+      temperaturePositionChart.update();
+    },
+    // 打开建议仓位逻辑模态框
+    openPositionLogicModal() {
+      // 先设置模态框显示
+      this.showPositionLogicModal = true;
+      
+      // 在下一个事件循环中初始化图表，确保DOM已更新
+      this.$nextTick(() => {
+        // 如果Chart.js已经加载，则初始化图表
+        if (typeof Chart !== 'undefined') {
+          this.initTemperaturePositionChart();
+        } else {
+          // 如果Chart.js还未加载，则等待其加载完成
+          const checkChart = setInterval(() => {
+            if (typeof Chart !== 'undefined') {
+              this.initTemperaturePositionChart();
+              clearInterval(checkChart);
+            }
+          }, 100);
+          
+          // 设置超时时间，避免无限等待
+          setTimeout(() => {
+            clearInterval(checkChart);
+          }, 5000);
+        }
+      });
+    },
+    // 关闭建议仓位逻辑模态框
+    closePositionLogicModal() {
+      this.showPositionLogicModal = false;
     }
   },
   mounted() {
@@ -1096,6 +1213,13 @@ export default {
       if (result.temperaturePositionTable && Array.isArray(result.temperaturePositionTable)) {
         this.temperaturePositionTable = result.temperaturePositionTable;
       }
+      
+      // 初始化图表（如果Chart.js已经加载）
+      if (typeof Chart !== 'undefined') {
+        this.$nextTick(() => {
+          this.initTemperaturePositionChart();
+        });
+      }
     });
     this.$watch(
       () => this.positions.map(item => item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))),
@@ -1110,6 +1234,16 @@ export default {
     setTimeout(() => {
       this.updateMarket();
     }, 2000);
+    
+    // 引入并初始化 Chart.js
+    const script = document.createElement('script');
+    script.src = '/js/chart.js';
+    script.onload = () => {
+      // Chart.js 已加载，可以在这里初始化图表
+      console.log('Chart.js loaded');
+      this.initTemperaturePositionChart();
+    };
+    document.head.appendChild(script);
   },
   computed: {
     suggestedPositionAH() {
