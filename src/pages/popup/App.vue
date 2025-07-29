@@ -357,7 +357,8 @@
        <h3>建议A股仓位计算逻辑</h3>
        <div style="text-align: left; font-size: 14px; line-height: 1.6;">
           <p><strong>计算公式：</strong></p>
-          <p>建议仓位 = 1 - (有知有行温度 + 好买温度) / 200</p>
+          <p>1. 计算平均温度 = (有知有行温度 + 好买温度) / 2</p>
+          <p>2. 根据平均温度在温度-仓位对照表中进行线性插值计算建议仓位</p>
           <br>
           <p><strong>数据来源：</strong></p>
           <p>• 有知有行温度：{{ temperatureData[0]?.temperature || 'N/A' }}</p>
@@ -365,14 +366,57 @@
           <br>
           <p><strong>计算过程：</strong></p>
           <p v-if="temperatureData && temperatureData.length >= 2">
-            建议仓位 = 1 - ({{ parseFloat(temperatureData[0]?.temperature) || 'N/A' }} + {{ parseFloat(temperatureData[1]?.temperature) || 'N/A' }}) / 200<br>
-            = 1 - {{ (parseFloat(temperatureData[0]?.temperature) + parseFloat(temperatureData[1]?.temperature)) || 'N/A' }} / 200<br>
-            = {{ suggestedPositionAH }}<br>
+            平均温度 = ({{ parseFloat(temperatureData[0]?.temperature) || 'N/A' }} + {{ parseFloat(temperatureData[1]?.temperature) || 'N/A' }}) / 2<br>
+            = {{ (parseFloat(temperatureData[0]?.temperature) + parseFloat(temperatureData[1]?.temperature)) / 2 || 'N/A' }}<br>
+            建议仓位 = {{ suggestedPositionAH }}<br>
           </p>
           <p v-else>数据尚未加载完成</p>
+          <br>
+          <p><strong>温度-仓位对照表：</strong></p>
+          <p>点击下方按钮可编辑温度-仓位对照表</p>
+          <button @click="showTemperaturePositionModal = true" style="background-color: #42b983; color: white; border: none; padding: 8px 16px; cursor: pointer; margin-top: 10px;">编辑对照表</button>
         </div>
         <div class="modal-buttons">
           <button @click="showPositionLogicModal = false" class="save-btn">关闭</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 温度-仓位对照表模态框 -->
+    <div v-if="showTemperaturePositionModal" class="modal-overlay">
+      <div class="modal-content" style="width: 500px;">
+        <h3>温度-仓位对照表</h3>
+        <div style="text-align: left; font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
+          <p>根据当前温度在对照表中进行线性插值计算建议仓位</p>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">温度</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">仓位 (%)</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, index) in temperaturePositionTable" :key="index">
+              <td style="border: 1px solid #ddd; padding: 8px;">
+                <input v-model.number="item.temperature" type="number" min="0" max="100" style="width: 60px;" />
+              </td>
+              <td style="border: 1px solid #ddd; padding: 8px;">
+                <input v-model.number="item.position" type="number" min="0" max="100" style="width: 60px;" />
+              </td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                <button @click="deleteTemperaturePositionRow(index)" style="background-color: #ff4d4f; color: white; border: none; padding: 4px 8px; cursor: pointer;">删除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-bottom: 15px;">
+          <button @click="addTemperaturePositionRow" style="background-color: #42b983; color: white; border: none; padding: 8px 16px; cursor: pointer;">添加行</button>
+        </div>
+        <div class="modal-buttons">
+          <button @click="showTemperaturePositionModal = false" class="cancel-btn">取消</button>
+          <button @click="saveTemperaturePositionTable" class="save-btn">保存</button>
         </div>
       </div>
     </div>
@@ -496,6 +540,16 @@ export default {
       positionSortByRatio: false, // 是否按持仓比例排序
       originalPositions: [],      // 保存原始顺序
       showPositionLogicModal: false, // 控制显示建议仓位逻辑的模态框
+      // 温度-仓位对照表
+      temperaturePositionTable: [
+        { temperature: 0, position: 100 },
+        { temperature: 20, position: 80 },
+        { temperature: 40, position: 60 },
+        { temperature: 60, position: 40 },
+        { temperature: 80, position: 20 },
+        { temperature: 100, position: 0 }
+      ],
+      showTemperaturePositionModal: false, // 控制显示温度-仓位对照表模态框
     }
   },
   methods: {
@@ -861,11 +915,72 @@ export default {
     },
     hideTooltip() {
       this.tooltip.show = false;
+    },
+    // 添加温度-仓位对照表行
+    addTemperaturePositionRow() {
+      this.temperaturePositionTable.push({
+        temperature: 0,
+        position: 0
+      });
+    },
+    // 删除温度-仓位对照表行
+    deleteTemperaturePositionRow(index) {
+      if (this.temperaturePositionTable.length > 1) {
+        this.temperaturePositionTable.splice(index, 1);
+      } else {
+        alert('至少需要保留一行数据');
+      }
+    },
+    // 保存温度-仓位对照表
+    saveTemperaturePositionTable() {
+      // 对表格按温度排序
+      this.temperaturePositionTable.sort((a, b) => a.temperature - b.temperature);
+      
+      // 保存到本地存储
+      chrome.storage.local.set({ 'temperaturePositionTable': this.temperaturePositionTable }, () => {
+        console.log('温度-仓位对照表已保存');
+      });
+      
+      // 关闭模态框
+      this.showTemperaturePositionModal = false;
+    },
+    // 根据温度-仓位对照表进行线性插值计算
+    calculatePositionFromTable(temperature) {
+      // 确保表格按温度排序
+      const sortedTable = [...this.temperaturePositionTable].sort((a, b) => a.temperature - b.temperature);
+      
+      // 如果温度小于等于最小温度，返回最大仓位
+      if (temperature <= sortedTable[0].temperature) {
+        return sortedTable[0].position;
+      }
+      
+      // 如果温度大于等于最大温度，返回最小仓位
+      if (temperature >= sortedTable[sortedTable.length - 1].temperature) {
+        return sortedTable[sortedTable.length - 1].position;
+      }
+      
+      // 找到温度所在的区间
+      for (let i = 0; i < sortedTable.length - 1; i++) {
+        if (temperature >= sortedTable[i].temperature && temperature <= sortedTable[i + 1].temperature) {
+          // 线性插值计算
+          const temp1 = sortedTable[i].temperature;
+          const temp2 = sortedTable[i + 1].temperature;
+          const pos1 = sortedTable[i].position;
+          const pos2 = sortedTable[i + 1].position;
+          
+          // 计算插值
+          const position = pos1 + (pos2 - pos1) * (temperature - temp1) / (temp2 - temp1);
+          return position;
+        }
+      }
+      
+      // 如果没有找到合适的区间，返回默认值
+      return 50;
     }
   },
   mounted() {
     chrome.storage.local.get([
-      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio'
+      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable'
     ], (result) => {
       console.log('读取到的indexData:', result.indexData);
       console.log('读取到的pe_values:', result.all_pe_data);
@@ -976,6 +1091,11 @@ export default {
         this.positionSortByRatio = false;
         this.positions = this.originalPositions.slice();
       }
+      
+      // 加载温度-仓位对照表数据
+      if (result.temperaturePositionTable && Array.isArray(result.temperaturePositionTable)) {
+        this.temperaturePositionTable = result.temperaturePositionTable;
+      }
     });
     this.$watch(
       () => this.positions.map(item => item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))),
@@ -1024,15 +1144,14 @@ export default {
           return 'N/A';
         }
         
-        // 计算建议仓位：1 - (有知有行数据 + 好买温度) / 2
-        const suggestedPosition = 1 - (youzhiyouxingTemp + haomaiTemp) / 200;
+        // 计算平均温度
+        const avgTemperature = (youzhiyouxingTemp + haomaiTemp) / 2;
         
-        // 限制结果在0-1之间
-        const finalPosition = Math.max(0, Math.min(1, suggestedPosition));
-        console.log('计算结果:', finalPosition);
+        // 使用温度-仓位对照表进行线性插值计算
+        const suggestedPosition = this.calculatePositionFromTable(avgTemperature);
         
         // 转换为百分比显示
-        return (finalPosition * 100).toFixed(0) + '%';
+        return suggestedPosition.toFixed(0) + '%';
       } catch (error) {
         console.error('计算建议仓位时出错:', error);
         return 'N/A';
