@@ -62,6 +62,7 @@
           <th>正常区间上沿</th>
           <th>压力位</th>
           <th>TX市盈率</th>
+          <th>五年平均值</th>
           <th>历史百分位</th>
           <th>zs市盈率</th>
           <th>zs百分位</th>
@@ -118,6 +119,12 @@
             {{ item.pressureLevel }}
           </td>
           <td>{{ item.currentPE }}</td>
+          <td>
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getFiveYearAverage(codeToPeKey(item.code)) }}
+            </span>
+            <span v-else>--</span>
+          </td>
           <td>
             <span v-if="item.currentPE && peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getPercentile(item.currentPE, peValuesMap[codeToPeKey(item.code)]) }}%
@@ -896,6 +903,35 @@ export default {
         pe: latest && latest.pe ? parseFloat(latest.pe) : '--',
         date: latest && latest.date ? latest.date : ''
       };
+    },
+    // 计算五年平均值
+    getFiveYearAverage(peKey) {
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return '--';
+      
+      // 计算五年前的日期
+      const now = new Date();
+      const fiveYearsAgo = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
+      
+      // 过滤出五年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= fiveYearsAgo;
+      });
+      
+      if (recentData.length === 0) return '--';
+      
+      // 计算平均值
+      const sum = recentData.reduce((acc, item) => {
+        const pe = parseFloat(item.pe);
+        return !isNaN(pe) ? acc + pe : acc;
+      }, 0);
+      
+      const average = sum / recentData.length;
+
+      return average.toFixed(2);
     },
     codeToPeKey(code) {
       if (!code) return '';
