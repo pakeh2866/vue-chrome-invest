@@ -319,9 +319,9 @@
     </div>
 
     <!-- 持仓新增弹窗 -->
-    <div v-if="showAddPositionModal" class="modal-overlay">
+    <div v-if="showAddPositionModal" class="modal-overlay" @keydown.enter="savePosition">
       <div class="modal-content">
-        <h3>新增持仓</h3>
+        <h3>{{ isEditingPosition ? '编辑持仓' : '新增持仓' }}</h3>
         <div class="form-grid">
           <div class="form-group">
             <label>分类</label>
