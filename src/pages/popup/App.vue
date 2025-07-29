@@ -561,6 +561,7 @@ export default {
         { temperature: 100, position: 0 }
       ],
       showTemperaturePositionModal: false, // 控制显示温度-仓位对照表模态框
+      isTemperaturePositionTableLoaded: false, // 标记温度-仓位对照表数据是否已从存储加载
     }
   },
   methods: {
@@ -947,9 +948,23 @@ export default {
       // 对表格按温度排序
       this.temperaturePositionTable.sort((a, b) => a.temperature - b.temperature);
       
+      // 在保存前打印数据，以便检查格式
+      console.log('准备保存温度-仓位对照表:', this.temperaturePositionTable);
+      console.log('数据类型检查:');
+      this.temperaturePositionTable.forEach((item, index) => {
+        console.log(`  [${index}] temperature: ${typeof item.temperature} (${item.temperature}), position: ${typeof item.position} (${item.position})`);
+      });
+      
       // 保存到本地存储
       chrome.storage.local.set({ 'temperaturePositionTable': this.temperaturePositionTable }, () => {
-        console.log('温度-仓位对照表已保存');
+        if (chrome.runtime.lastError) {
+          console.error('保存温度-仓位对照表失败:', chrome.runtime.lastError);
+          alert('温度-仓位对照表保存失败: ' + chrome.runtime.lastError.message);
+        } else {
+          console.log('温度-仓位对照表已保存:', this.temperaturePositionTable);
+          // 添加用户可见的成功提示
+          alert('温度-仓位对照表保存成功!');
+        }
       });
       
       // 关闭模态框
@@ -1210,9 +1225,46 @@ export default {
       }
       
       // 加载温度-仓位对照表数据
-      if (result.temperaturePositionTable && Array.isArray(result.temperaturePositionTable)) {
-        this.temperaturePositionTable = result.temperaturePositionTable;
+      console.log('尝试加载温度-仓位对照表:', result.temperaturePositionTable);
+      let loadedTable = result.temperaturePositionTable;
+      
+      // 如果loadedTable是一个类数组对象（例如 {0: {...}, 1: {...}}），则转换为数组
+      if (loadedTable && typeof loadedTable === 'object' && !Array.isArray(loadedTable)) {
+        // 检查是否所有键都是数字字符串或数字, 且从0开始连续
+        const keys = Object.keys(loadedTable).map(Number).sort((a, b) => a - b);
+        const isSequential = keys.length > 0 && keys[0] === 0 && keys.every((key, index) => key === index);
+        
+        if (isSequential) {
+          loadedTable = Array.from({length: keys.length}, (_, i) => loadedTable[i]);
+          console.log('已将类数组对象转换为数组:', loadedTable);
+        } else {
+          // 如果键不连续，则直接使用Object.values
+          loadedTable = Object.values(loadedTable);
+          console.log('已将对象的值转换为数组:', loadedTable);
+        }
       }
+      
+      if (loadedTable && Array.isArray(loadedTable) && loadedTable.length > 0) {
+        // 验证数组中的每个元素是否具有 temperature 和 position 属性
+        const isValidFormat = loadedTable.every(item =>
+          typeof item === 'object' &&
+          item !== null &&
+          typeof item.temperature === 'number' &&
+          typeof item.position === 'number'
+        );
+        
+        if (isValidFormat) {
+          this.temperaturePositionTable = loadedTable;
+          console.log('成功加载温度-仓位对照表:', this.temperaturePositionTable);
+        } else {
+          console.warn('存储中的温度-仓位对照表数据格式不正确，使用默认值');
+        }
+      } else {
+        console.log('存储中没有有效的温度-仓位对照表数据，使用默认值');
+      }
+      
+      // 标记温度-仓位对照表数据已加载
+      this.isTemperaturePositionTableLoaded = true;
       
       // 初始化图表（如果Chart.js已经加载）
       if (typeof Chart !== 'undefined') {
