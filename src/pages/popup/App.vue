@@ -41,6 +41,7 @@
     <div style="display: flex; align-items: center; gap: 10px;">
         <h2 style="margin-right: 10px;">指数参考</h2>
         <button @click="addIndex">新增指数</button>
+        <button @click="fetchZsData" style="margin-left: 10px;">一键zs数据</button>
       </div>
     <table class="data-table">
       <thead>
@@ -158,9 +159,16 @@
     <!-- 新增持仓表格 -->
     <div style="display: flex; align-items: center; margin-top: 30px;">
       <h2 style="margin-right: 10px;">持仓表格</h2>
-      <!-- 总持仓金额显示 -->
-      <div style="font-weight: bold; font-size: 15px; margin-right: 20px; background-color: #e8f4f8; padding: 8px 12px; border-radius: 4px;">
-        总持仓金额：{{ totalPositionValue.toFixed(2) }}
+      <!-- 金额显示容器 -->
+      <div style="margin-right: 20px; background-color: #e8f4f8; padding: 8px 12px; border-radius: 4px;">
+        <!-- 总持仓金额显示 -->
+        <div style="font-weight: bold; font-size: 15px;">
+          总持仓金额：{{ totalPositionValue.toFixed(2) }}
+        </div>
+        <!-- 单份金额显示 -->
+        <div style="font-weight: bold; font-size: 15px; margin-top: 5px;">
+          单份金额：{{ Math.floor(totalPositionValue / 150) }}
+        </div>
       </div>
       <!-- 分类持仓比例显示 -->
       <div style="font-size: 14px; margin-right: 20px;">
@@ -1110,6 +1118,16 @@ export default {
     // 关闭建议仓位逻辑模态框
     closePositionLogicModal() {
       this.showPositionLogicModal = false;
+    },
+
+    // 一键zs数据按钮功能（暂空）
+    fetchZsData() {
+      // 遍历所有指数数据，打开芝士链接
+      this.indexData.forEach(item => {
+        if (item.cheeseUrl && item.cheeseUrl.trim()) {
+          window.open(item.cheeseUrl, '_blank');
+        }
+      });
     }
   },
   mounted() {
