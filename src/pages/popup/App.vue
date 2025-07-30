@@ -118,7 +118,7 @@
           <td :style="{ backgroundColor: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#ff4d4f' : '', color: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#fff' : '' }">
             {{ item.pressureLevel }}
           </td>
-          <td>{{ item.currentPE }}</td>
+          <td :style="{ color: isPERatioExceeded(item.currentPE, getLatestPe(codeToPeKey(item.code))) ? 'red' : '' }">{{ item.currentPE }}</td>
           <td>
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getFiveYearAverage(codeToPeKey(item.code)) }}
@@ -1164,6 +1164,16 @@ export default {
           window.open(item.cheeseUrl, '_blank');
         }
       });
+    },
+    // 判断TX市盈率与zs市盈率差值是否超过2%
+    isPERatioExceeded(txPE, zsPE) {
+      // 确保两个值都存在且为有效数字
+      if (!txPE || !zsPE || isNaN(txPE) || isNaN(zsPE) || zsPE === 0) {
+        return false;
+      }
+      // 计算差值百分比
+      const ratio = Math.abs((txPE - zsPE) / zsPE) * 100;
+      return ratio > 2;
     }
   },
   mounted() {
