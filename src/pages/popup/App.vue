@@ -63,6 +63,7 @@
           <th>压力位</th>
           <th>TX市盈率</th>
           <th>五年平均值</th>
+          <th>十年平均值</th>
           <th>历史百分位</th>
           <th>zs市盈率</th>
           <th>zs百分位</th>
@@ -125,6 +126,12 @@
           <td>
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getFiveYearAverage(codeToPeKey(item.code)) }}
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td style="cursor: pointer; text-decoration: underline;" @click="showTenYearAverageModal(item)">
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getTenYearAverage(codeToPeKey(item.code)) }}
             </span>
             <span v-else>--</span>
           </td>
@@ -455,6 +462,46 @@
   <div style="margin-top: 20px;">
     <canvas id="myChart" width="400" height="200"></canvas>
   </div>
+  
+  <!-- 十年平均值计算详情模态框 -->
+  <div v-if="tenYearAverageModal.show" class="modal-overlay" @click="tenYearAverageModal.show = false">
+    <div class="modal-content" style="width: 600px;" @click.stop>
+      <h3>{{ tenYearAverageModal.name }} 十年平均值计算详情</h3>
+      <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+        <p><strong>计算结果：</strong>{{ tenYearAverageModal.tenYearAverage }}</p>
+        <br>
+        <p><strong>计算逻辑：</strong></p>
+        <p>1. 获取当前日期到十年前的历史市盈率数据</p>
+        <p>2. 过滤出有效数据（去除无效日期和PE值）</p>
+        <p>3. 计算所有有效数据的算术平均值</p>
+        <br>
+        <p><strong>计算过程：</strong></p>
+        <p>• 数据时间范围：{{ tenYearAverageModal.calculationDetails.startDate }} 至 {{ tenYearAverageModal.calculationDetails.endDate }}</p>
+        <p>• 有效数据数量：{{ tenYearAverageModal.calculationDetails.dataCount }}</p>
+        <p>• PE值总和：{{ tenYearAverageModal.calculationDetails.sum.toFixed(2) }}</p>
+        <p>• 平均值计算：{{ tenYearAverageModal.calculationDetails.sum.toFixed(2) }} ÷ {{ tenYearAverageModal.calculationDetails.dataCount }} = {{ tenYearAverageModal.calculationDetails.average.toFixed(2) }}</p>
+        <br>
+        <p><strong>数据样本（随机10条，按日期排序）：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(data, index) in tenYearAverageModal.calculationDetails.dataSample" :key="index">
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.date }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.pe }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-buttons">
+        <button @click="tenYearAverageModal.show = false" class="save-btn">关闭</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -482,6 +529,21 @@ export default {
         text: '',
         x: 0,
         y: 0
+      },
+      // 十年平均值模态框相关数据
+      tenYearAverageModal: {
+        show: false,
+        code: '',
+        name: '',
+        tenYearAverage: '',
+        calculationDetails: {
+          startDate: '',
+          endDate: '',
+          dataCount: 0,
+          sum: 0,
+          average: 0,
+          dataSample: []
+        }
       },
       newIndexData: {
         name: '',
@@ -939,6 +1001,35 @@ export default {
 
       return average.toFixed(2);
     },
+    // 计算十年平均值
+    getTenYearAverage(peKey) {
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return '--';
+      
+      // 计算十年前的日期
+      const now = new Date();
+      const tenYearsAgo = new Date(now.getFullYear() - 10, now.getMonth(), now.getDate());
+      
+      // 过滤出十年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= tenYearsAgo;
+      });
+      
+      if (recentData.length === 0) return '--';
+      
+      // 计算平均值
+      const sum = recentData.reduce((acc, item) => {
+        const pe = parseFloat(item.pe);
+        return !isNaN(pe) ? acc + pe : acc;
+      }, 0);
+      
+      const average = sum / recentData.length;
+      
+      return average.toFixed(2);
+    },
     codeToPeKey(code) {
       if (!code) return '';
       if (code.startsWith('sh')) return code.slice(2).toUpperCase() + '.SH';
@@ -1180,6 +1271,58 @@ export default {
       // 计算差值百分比
       const ratio = Math.abs((txPE - zsPE) / zsPE) * 100;
       return ratio > 2;
+    },
+    // 显示十年平均值计算详情模态框
+    showTenYearAverageModal(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return;
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return;
+      
+      // 计算十年前的日期
+      const now = new Date();
+      const tenYearsAgo = new Date(now.getFullYear() - 10, now.getMonth(), now.getDate());
+      
+      // 过滤出十年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= tenYearsAgo;
+      });
+      
+      if (recentData.length === 0) return;
+      
+      // 计算平均值
+      const sum = recentData.reduce((acc, item) => {
+        const pe = parseFloat(item.pe);
+        return !isNaN(pe) ? acc + pe : acc;
+      }, 0);
+      
+      const average = sum / recentData.length;
+      
+      // 获取数据样本（随机10条，然后按日期排序）
+      const shuffledData = [...recentData].sort(() => 0.5 - Math.random()).slice(0, 10);
+      const dataSample = shuffledData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // 设置模态框数据
+      this.tenYearAverageModal = {
+        show: true,
+        code: item.code,
+        name: item.name,
+        tenYearAverage: average.toFixed(2),
+        calculationDetails: {
+          startDate: tenYearsAgo.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0],
+          dataCount: recentData.length,
+          sum: sum,
+          average: average,
+          dataSample: dataSample.map(item => ({
+            date: item.date,
+            pe: parseFloat(item.pe).toFixed(2)
+          }))
+        }
+      };
     }
   },
   mounted() {
