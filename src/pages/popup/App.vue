@@ -118,7 +118,10 @@
           <td :style="{ backgroundColor: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#ff4d4f' : '', color: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#fff' : '' }">
             {{ item.pressureLevel }}
           </td>
-          <td :style="{ color: isPERatioExceeded(item.currentPE, getLatestPe(codeToPeKey(item.code))) ? 'red' : '' }">{{ item.currentPE }}</td>
+          <td :style="{
+            color: isPERatioExceeded(item.currentPE, getLatestPe(codeToPeKey(item.code))) ? 'red' : '',
+            backgroundColor: item.currentPE && getFiveYearAverage(codeToPeKey(item.code)) !== '--' && parseFloat(item.currentPE) < parseFloat(getFiveYearAverage(codeToPeKey(item.code))) ? 'lightgreen' : ''
+          }">{{ item.currentPE }}</td>
           <td>
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getFiveYearAverage(codeToPeKey(item.code)) }}
@@ -134,6 +137,9 @@
           <td
             @mouseenter="showTooltip($event, getLatestPeWithDate(codeToPeKey(item.code)).date)"
             @mouseleave="hideTooltip"
+            :style="{
+              backgroundColor: peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0 && getFiveYearAverage(codeToPeKey(item.code)) !== '--' && getLatestPe(codeToPeKey(item.code)) < parseFloat(getFiveYearAverage(codeToPeKey(item.code))) ? 'lightgreen' : ''
+            }"
           >
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getLatestPe(codeToPeKey(item.code)) }}
