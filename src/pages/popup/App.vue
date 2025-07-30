@@ -1032,6 +1032,10 @@ export default {
     },
     codeToPeKey(code) {
       if (!code) return '';
+      // 特殊处理 sh000990 和 000990.CSI 的对应关系
+      if (code === 'sh000990') {
+        return '000990.CSI';
+      }
       if (code.startsWith('sh')) return code.slice(2).toUpperCase() + '.SH';
       if (code.startsWith('sz')) return code.slice(2).toUpperCase() + '.SZ';
       if (code.startsWith('hk')) {
