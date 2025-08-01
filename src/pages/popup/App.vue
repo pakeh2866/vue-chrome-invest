@@ -131,7 +131,7 @@
             <span v-else>--</span>
           </td>
           <td style="cursor: pointer; text-decoration: underline;" @click="showFiveYearPercentileModal(item)">
-            <span v-if="item.currentPE && peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getFiveYearPercentile(item.currentPE, codeToPeKey(item.code)) }}%
             </span>
             <span v-else>--</span>
@@ -557,6 +557,10 @@
       <div style="text-align: left; font-size: 14px; line-height: 1.6;">
         <p><strong>计算结果：</strong>{{ fiveYearPercentileModal.percentile }}%</p>
         <p><strong>当前PE值：</strong>{{ fiveYearPercentileModal.currentPE }}</p>
+        <div v-if="fiveYearPercentileModal.usedZsPE" style="background-color: #fff3cd; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <p style="color: #856404; margin: 0;"><strong>注意：</strong>由于TX市盈率为0或与zs市盈率差距超过10%，本次计算采用了zs市盈率。</p>
+          <p style="color: #856404; margin: 5px 0 0 0;">TX市盈率：{{ fiveYearPercentileModal.originalPE }}，zs市盈率：{{ fiveYearPercentileModal.zsPE }}</p>
+        </div>
         <br>
         <p><strong>计算逻辑：</strong></p>
         <p>1. 获取当前日期到五年前的历史市盈率数据</p>
@@ -1170,7 +1174,7 @@ export default {
     },
     // 计算五年百分位
     getFiveYearPercentile(currentPE, peKey) {
-      if (!currentPE || !this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
       
       const arr = this.rawPeData[peKey];
       if (arr.length === 0) return '--';
@@ -1193,8 +1197,21 @@ export default {
       if (peValues.length === 0) return '--';
       
       // 计算当前PE在历史数据中的百分位
-      const currentPEValue = parseFloat(currentPE);
-      if (isNaN(currentPEValue)) return '--';
+      let currentPEValue = parseFloat(currentPE);
+      if (isNaN(currentPEValue)) currentPEValue = 0;
+      
+      // 获取zs市盈率
+      const zsPE = this.getLatestPe(peKey);
+      
+      // 检查是否需要使用zs市盈率代替TX市盈率
+      // 条件1: TX市盈率为0
+      // 条件2: TX市盈率与zs市盈率差距在10%以上
+      if (currentPEValue === 0 || (zsPE !== '--' && Math.abs((currentPEValue - parseFloat(zsPE)) / parseFloat(zsPE)) * 100 > 10)) {
+        currentPEValue = parseFloat(zsPE);
+      }
+      
+      // 如果无法获取有效的PE值，返回'--'
+      if (isNaN(currentPEValue) || currentPEValue === 0) return '--';
       
       // 统计小于当前PE值的数量
       let count = 0;
@@ -1611,8 +1628,20 @@ export default {
       if (peValues.length === 0) return;
       
       // 计算当前PE值在历史数据中的百分位
-      const currentPEValue = parseFloat(item.currentPE);
+      let currentPEValue = parseFloat(item.currentPE);
       if (isNaN(currentPEValue)) return;
+      
+      // 获取zs市盈率
+      const zsPE = this.getLatestPe(peKey);
+      let usedZsPE = false;
+      
+      // 检查是否需要使用zs市盈率代替TX市盈率
+      // 条件1: TX市盈率为0
+      // 条件2: TX市盈率与zs市盈率差距在10%以上
+      if (currentPEValue === 0 || (zsPE !== '--' && Math.abs((currentPEValue - parseFloat(zsPE)) / parseFloat(zsPE)) * 100 > 10)) {
+        currentPEValue = parseFloat(zsPE);
+        usedZsPE = true;
+      }
       
       // 统计小于当前PE值的数量
       let lowerCount = 0;
@@ -1645,6 +1674,9 @@ export default {
         code: item.code,
         name: item.name,
         currentPE: currentPEValue.toFixed(2),
+        originalPE: item.currentPE,
+        zsPE: zsPE,
+        usedZsPE: usedZsPE,
         percentile: percentile.toFixed(0),
         calculationDetails: {
           startDate: fiveYearsAgo.toISOString().split('T')[0],
