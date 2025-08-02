@@ -143,8 +143,8 @@
             <span v-else>--</span>
           </td>
           <td style="cursor: pointer; text-decoration: underline;" @click="showHistoryPercentileModal(item)">
-            <span v-if="item.currentPE && peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
-              {{ getPercentile(item.currentPE, peValuesMap[codeToPeKey(item.code)]) }}%
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getHistoryPercentileForDisplay(item) }}%
             </span>
             <span v-else>--</span>
           </td>
@@ -1896,6 +1896,45 @@ export default {
       // 线性插值
       const weight = index - lowerIndex;
       return sortedArray[lowerIndex] * (1 - weight) + sortedArray[upperIndex] * weight;
+    },
+    // 计算历史百分位用于主页显示（与详情页面逻辑一致）
+    getHistoryPercentileForDisplay(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return '--';
+      
+      // 提取有效的PE值
+      const peValues = arr.map(item => parseFloat(item.pe)).filter(pe => !isNaN(pe));
+      if (peValues.length === 0) return '--';
+      
+      // 计算当前PE值在历史数据中的百分位
+      let currentPEValue = parseFloat(item.currentPE);
+      if (isNaN(currentPEValue)) return '--';
+      
+      // 获取zs市盈率
+      const zsPE = this.getLatestPe(peKey);
+      
+      // 检查是否需要使用zs市盈率代替TX市盈率
+      // 条件1: TX市盈率为0
+      // 条件2: TX市盈率与zs市盈率差距在10%以上
+      if (currentPEValue === 0 || (zsPE !== '--' && Math.abs((currentPEValue - parseFloat(zsPE)) / parseFloat(zsPE)) * 100 > 10)) {
+        currentPEValue = parseFloat(zsPE);
+      }
+      
+      // 如果无法获取有效的PE值，返回'--'
+      if (isNaN(currentPEValue) || currentPEValue === 0) return '--';
+      
+      // 统计小于当前PE值的数量
+      let count = 0;
+      for (let i = 0; i < peValues.length; i++) {
+        if (peValues[i] < currentPEValue) count++;
+      }
+      
+      // 计算百分位
+      const percentile = (count / peValues.length) * 100;
+      return percentile.toFixed(0);
     }
   },
   mounted() {
