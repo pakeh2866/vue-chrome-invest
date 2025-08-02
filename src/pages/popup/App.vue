@@ -130,7 +130,9 @@
             </span>
             <span v-else>--</span>
           </td>
-          <td style="cursor: pointer; text-decoration: underline;" @click="showFiveYearPercentileModal(item)">
+          <td style="cursor: pointer; text-decoration: underline;"
+              :style="{ backgroundColor: getFiveYearPercentileColor(item) }"
+              @click="showFiveYearPercentileModal(item)">
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getFiveYearPercentile(item.currentPE, codeToPeKey(item.code)) }}%
             </span>
@@ -142,7 +144,9 @@
             </span>
             <span v-else>--</span>
           </td>
-          <td style="cursor: pointer; text-decoration: underline;" @click="showHistoryPercentileModal(item)">
+          <td style="cursor: pointer; text-decoration: underline;"
+              :style="{ backgroundColor: getHistoryPercentileColor(item) }"
+              @click="showHistoryPercentileModal(item)">
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getHistoryPercentileForDisplay(item) }}%
             </span>
@@ -1935,6 +1939,33 @@ export default {
       // 计算百分位
       const percentile = (count / peValues.length) * 100;
       return percentile.toFixed(0);
+    },
+    // 获取五年百分位的颜色
+    getFiveYearPercentileColor(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '';
+      
+      const percentileValue = this.getFiveYearPercentile(item.currentPE, peKey);
+      if (percentileValue === '--') return '';
+      
+      const percentile = parseFloat(percentileValue);
+      if (isNaN(percentile)) return '';
+      
+      if (percentile < 25) return '#90ee90'; // 绿色
+      if (percentile > 75) return '#ff4d4f'; // 红色
+      return '';
+    },
+    // 获取历史百分位的颜色
+    getHistoryPercentileColor(item) {
+      const percentileValue = this.getHistoryPercentileForDisplay(item);
+      if (percentileValue === '--') return '';
+      
+      const percentile = parseFloat(percentileValue);
+      if (isNaN(percentile)) return '';
+      
+      if (percentile < 25) return '#90ee90'; // 绿色
+      if (percentile > 75) return '#ff4d4f'; // 红色
+      return '';
     }
   },
   mounted() {
