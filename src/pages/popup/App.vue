@@ -95,7 +95,7 @@
           </td>
           <td>{{ item.previousHigh }}</td>
           <td
-            :style="item.currentIndexPoint && item.previousHigh && item.previousHigh != 0 && (((item.currentIndexPoint - item.previousHigh) / item.previousHigh) * 100) <= -70 ? { backgroundColor: '#90ee90' } : {}"
+            :style="item.currentIndexPoint && item.previousHigh && item.previousHigh != 0 && (((item.currentIndexPoint - item.previousHigh) / item.previousHigh) * 100) <= -70 ? { backgroundColor: '#90ee90', borderRight: '3px solid #333' } : { borderRight: '3px solid #333' }"
           >
             <span v-if="item.currentIndexPoint && item.previousHigh && item.previousHigh != 0">
               {{ (((item.currentIndexPoint - item.previousHigh) / item.previousHigh) * 100).toFixed(2) }}%
@@ -117,7 +117,7 @@
           <td :style="{ backgroundColor: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#ffe066' : '', color: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#000' : '' }">
             {{ item.normalRangeUpper }}
           </td>
-          <td :style="{ backgroundColor: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#ff4d4f' : '', color: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#fff' : '' }">
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#ff4d4f' : '', color: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#fff' : '', borderRight: '3px solid #333' }">
             {{ item.pressureLevel }}
           </td>
           <td :style="{
