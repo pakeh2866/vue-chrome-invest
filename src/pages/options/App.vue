@@ -65,6 +65,7 @@
           <th>五年平均值</th>
           <th>五年百分位</th>
           <th>十年平均值</th>
+          <th>十年百分位</th>
           <th>历史百分位</th>
           <th>zs市盈率</th>
           <th>zs百分位</th>
@@ -141,6 +142,14 @@
           <td style="cursor: pointer; text-decoration: underline;" @click="showTenYearAverageModal(item)">
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getTenYearAverage(codeToPeKey(item.code)) }}
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td style="cursor: pointer; text-decoration: underline;"
+              :style="{ backgroundColor: getTenYearPercentileColor(item) }"
+              @click="showTenYearPercentileModal(item)">
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getTenYearPercentile(item.currentPE, codeToPeKey(item.code)) }}%
             </span>
             <span v-else>--</span>
           </td>
@@ -648,6 +657,100 @@
     </div>
   </div>
   
+  <!-- 十年百分位计算详情模态框 -->
+  <div v-if="tenYearPercentileModal.show" class="modal-overlay" @click="tenYearPercentileModal.show = false">
+    <div class="modal-content" style="width: 700px;" @click.stop>
+      <h3>{{ tenYearPercentileModal.name }} 十年百分位计算详情</h3>
+      <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+        <p><strong>计算结果：</strong>{{ tenYearPercentileModal.percentile }}%</p>
+        <p><strong>当前PE值：</strong>{{ tenYearPercentileModal.currentPE }}</p>
+        <div v-if="tenYearPercentileModal.usedZsPE" style="background-color: #fff3cd; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <p style="color: #856404; margin: 0;"><strong>注意：</strong>由于TX市盈率为0或与zs市盈率差距超过10%，本次计算采用了zs市盈率。</p>
+          <p style="color: #856404; margin: 5px 0 0 0;">TX市盈率：{{ tenYearPercentileModal.originalPE }}，zs市盈率：{{ tenYearPercentileModal.zsPE }}</p>
+        </div>
+        <br>
+        <p><strong>计算逻辑：</strong></p>
+        <p>1. 获取当前日期到十年前的历史市盈率数据</p>
+        <p>2. 过滤出有效数据（去除无效日期和PE值）</p>
+        <p>3. 计算当前PE值在历史数据中的百分位位置</p>
+        <br>
+        <p><strong>计算过程：</strong></p>
+        <p>• 数据时间范围：{{ tenYearPercentileModal.calculationDetails.startDate }} 至 {{ tenYearPercentileModal.calculationDetails.endDate }}</p>
+        <p>• 有效数据数量：{{ tenYearPercentileModal.calculationDetails.dataCount }}</p>
+        <p>• 当前PE值：{{ tenYearPercentileModal.currentPE }}</p>
+        <p>• 历史数据中小于当前PE值的数量：{{ tenYearPercentileModal.calculationDetails.lowerCount }}</p>
+        <p>• 百分位计算：({{ tenYearPercentileModal.calculationDetails.lowerCount }} ÷ {{ tenYearPercentileModal.calculationDetails.dataCount }}) × 100 = {{ tenYearPercentileModal.percentile }}%</p>
+        <br>
+        <p><strong>不同百分位的PE值：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">百分位</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">0% (最小值)</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ tenYearPercentileModal.calculationDetails.percentileValues['0'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">十年内最低PE值</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">10%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ tenYearPercentileModal.calculationDetails.percentileValues['10'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中10%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">25%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ tenYearPercentileModal.calculationDetails.percentileValues['25'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中25%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">50% (中位数)</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ tenYearPercentileModal.calculationDetails.percentileValues['50'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中50%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">75%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ tenYearPercentileModal.calculationDetails.percentileValues['75'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中75%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">90%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ tenYearPercentileModal.calculationDetails.percentileValues['90'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中90%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">100% (最大值)</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ tenYearPercentileModal.calculationDetails.percentileValues['100'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">十年内最高PE值</td>
+            </tr>
+          </tbody>
+        </table>
+        <br>
+        <p><strong>数据样本（随机10条，按日期排序）：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(data, index) in tenYearPercentileModal.calculationDetails.dataSample" :key="index">
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.date }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.pe }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-buttons">
+        <button @click="tenYearPercentileModal.show = false" class="save-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+  
   <!-- 历史百分位计算详情模态框 -->
   <div v-if="historyPercentileModal.show" class="modal-overlay" @click="historyPercentileModal.show = false">
     <div class="modal-content" style="width: 700px;" @click.stop>
@@ -810,6 +913,25 @@ export default {
           startDate: '',
           endDate: '',
           dataCount: 0,
+          percentileValues: {},
+          dataSample: []
+        }
+      },
+      // 十年百分位模态框相关数据
+      tenYearPercentileModal: {
+        show: false,
+        code: '',
+        name: '',
+        currentPE: '',
+        originalPE: '',
+        zsPE: '',
+        usedZsPE: false,
+        percentile: '',
+        calculationDetails: {
+          startDate: '',
+          endDate: '',
+          dataCount: 0,
+          lowerCount: 0,
           percentileValues: {},
           dataSample: []
         }
@@ -1336,6 +1458,57 @@ export default {
       const percentile = (count / peValues.length) * 100;
       return percentile.toFixed(0);
     },
+    // 计算十年百分位
+    getTenYearPercentile(currentPE, peKey) {
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return '--';
+      
+      // 计算十年前的日期
+      const now = new Date();
+      const tenYearsAgo = new Date(now.getFullYear() - 10, now.getMonth(), now.getDate());
+      
+      // 过滤出十年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= tenYearsAgo;
+      });
+      
+      if (recentData.length === 0) return '--';
+      
+      // 提取有效的PE值
+      const peValues = recentData.map(item => parseFloat(item.pe)).filter(pe => !isNaN(pe));
+      if (peValues.length === 0) return '--';
+      
+      // 计算当前PE值在历史数据中的百分位
+      let currentPEValue = parseFloat(currentPE);
+      if (isNaN(currentPEValue)) currentPEValue = 0;
+      
+      // 获取zs市盈率
+      const zsPE = this.getLatestPe(peKey);
+      
+      // 检查是否需要使用zs市盈率代替TX市盈率
+      // 条件1: TX市盈率为0
+      // 条件2: TX市盈率与zs市盈率差距在10%以上
+      if (currentPEValue === 0 || (zsPE !== '--' && Math.abs((currentPEValue - parseFloat(zsPE)) / parseFloat(zsPE)) * 100 > 10)) {
+        currentPEValue = parseFloat(zsPE);
+      }
+      
+      // 如果无法获取有效的PE值，返回'--'
+      if (isNaN(currentPEValue) || currentPEValue === 0) return '--';
+      
+      // 统计小于当前PE值的数量
+      let count = 0;
+      for (let i = 0; i < peValues.length; i++) {
+        if (peValues[i] < currentPEValue) count++;
+      }
+      
+      // 计算百分位
+      const percentile = (count / peValues.length) * 100;
+      return percentile.toFixed(0);
+    },
     // 计算十年平均值
     getTenYearAverage(peKey) {
       if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
@@ -1804,6 +1977,95 @@ export default {
         }
       };
     },
+    // 显示十年百分位计算详情模态框
+    showTenYearPercentileModal(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return;
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return;
+      
+      // 计算十年前的日期
+      const now = new Date();
+      const tenYearsAgo = new Date(now.getFullYear() - 10, now.getMonth(), now.getDate());
+      
+      // 过滤出十年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= tenYearsAgo;
+      });
+      
+      if (recentData.length === 0) return;
+      
+      // 提取有效的PE值
+      const peValues = recentData.map(item => parseFloat(item.pe)).filter(pe => !isNaN(pe));
+      if (peValues.length === 0) return;
+      
+      // 计算当前PE值在历史数据中的百分位
+      let currentPEValue = parseFloat(item.currentPE);
+      if (isNaN(currentPEValue)) return;
+      
+      // 获取zs市盈率
+      const zsPE = this.getLatestPe(peKey);
+      let usedZsPE = false;
+      
+      // 检查是否需要使用zs市盈率代替TX市盈率
+      // 条件1: TX市盈率为0
+      // 条件2: TX市盈率与zs市盈率差距在10%以上
+      if (currentPEValue === 0 || (zsPE !== '--' && Math.abs((currentPEValue - parseFloat(zsPE)) / parseFloat(zsPE)) * 100 > 10)) {
+        currentPEValue = parseFloat(zsPE);
+        usedZsPE = true;
+      }
+      
+      // 统计小于当前PE值的数量
+      let lowerCount = 0;
+      for (let i = 0; i < peValues.length; i++) {
+        if (peValues[i] < currentPEValue) lowerCount++;
+      }
+      
+      // 计算百分位
+      const percentile = (lowerCount / peValues.length) * 100;
+      
+      // 计算不同百分位的PE值
+      const sortedPeValues = [...peValues].sort((a, b) => a - b);
+      const percentileValues = {
+        '0': sortedPeValues[0].toFixed(2), // 最小值
+        '10': this.getPercentileValue(sortedPeValues, 10).toFixed(2),
+        '25': this.getPercentileValue(sortedPeValues, 25).toFixed(2),
+        '50': this.getPercentileValue(sortedPeValues, 50).toFixed(2), // 中位数
+        '75': this.getPercentileValue(sortedPeValues, 75).toFixed(2),
+        '90': this.getPercentileValue(sortedPeValues, 90).toFixed(2),
+        '100': sortedPeValues[sortedPeValues.length - 1].toFixed(2) // 最大值
+      };
+      
+      // 获取数据样本（随机10条，然后按日期排序）
+      const shuffledData = [...recentData].sort(() => 0.5 - Math.random()).slice(0, 10);
+      const dataSample = shuffledData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // 设置模态框数据
+      this.tenYearPercentileModal = {
+        show: true,
+        code: item.code,
+        name: item.name,
+        currentPE: currentPEValue.toFixed(2),
+        originalPE: item.currentPE,
+        zsPE: zsPE,
+        usedZsPE: usedZsPE,
+        percentile: percentile.toFixed(0),
+        calculationDetails: {
+          startDate: tenYearsAgo.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0],
+          dataCount: peValues.length,
+          lowerCount: lowerCount,
+          percentileValues: percentileValues,
+          dataSample: dataSample.map(item => ({
+            date: item.date,
+            pe: parseFloat(item.pe).toFixed(2)
+          }))
+        }
+      };
+    },
     // 显示历史百分位计算详情模态框
     showHistoryPercentileModal(item) {
       const peKey = this.codeToPeKey(item.code);
@@ -1958,6 +2220,21 @@ export default {
     // 获取历史百分位的颜色
     getHistoryPercentileColor(item) {
       const percentileValue = this.getHistoryPercentileForDisplay(item);
+      if (percentileValue === '--') return '';
+      
+      const percentile = parseFloat(percentileValue);
+      if (isNaN(percentile)) return '';
+      
+      if (percentile < 25) return '#90ee90'; // 绿色
+      if (percentile > 75) return '#ff4d4f'; // 红色
+      return '';
+    },
+    // 获取十年百分位的颜色
+    getTenYearPercentileColor(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '';
+      
+      const percentileValue = this.getTenYearPercentile(item.currentPE, peKey);
       if (percentileValue === '--') return '';
       
       const percentile = parseFloat(percentileValue);
