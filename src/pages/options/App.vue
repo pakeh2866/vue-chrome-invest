@@ -179,7 +179,7 @@
             </span>
             <span v-else>--</span>
           </td>
-          <td>{{ item.suggestedPosition }}</td>
+          <td>{{ calculateSuggestedPosition(item) }}</td>
           <td class="action-buttons">
             <button @click="onCheeseDataClick(item)">芝士</button>
             <button @click="editIndex(index)">编辑</button>
@@ -2243,6 +2243,27 @@ export default {
       if (percentile < 25) return '#90ee90'; // 绿色
       if (percentile > 75) return '#ff4d4f'; // 红色
       return '';
+    },
+    // 计算建议仓位
+    calculateSuggestedPosition(item) {
+      try {
+        // 直接使用表格中显示的百分位值
+        const fiveYearPercentile = parseFloat(this.getFiveYearPercentile(item.currentPE, this.codeToPeKey(item.code))) || 0;
+        const tenYearPercentile = parseFloat(this.getTenYearPercentile(item.currentPE, this.codeToPeKey(item.code))) || 0;
+        const historyPercentile = parseFloat(this.getHistoryPercentileForDisplay(item)) || 0;
+        
+        // 计算综合百分位（加权平均）
+        const combinedPercentile = (fiveYearPercentile * 0.6) + (tenYearPercentile * 0.3) + (historyPercentile * 0.1);
+        
+        // 计算建议仓位（1 - 综合百分位）
+        const suggestedPosition = 1 - (combinedPercentile / 100);
+        
+        // 转换为百分比显示
+        return (suggestedPosition * 100).toFixed(0) + '%';
+      } catch (error) {
+        console.error('计算建议仓位时出错:', error);
+        return 'N/A';
+      }
     }
   },
   mounted() {
