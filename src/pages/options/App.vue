@@ -179,7 +179,9 @@
             </span>
             <span v-else>--</span>
           </td>
-          <td>{{ calculateSuggestedPosition(item) }}</td>
+          <td style="cursor: pointer; text-decoration: underline;" @click="showSuggestedPositionModal(item)">
+            {{ calculateSuggestedPosition(item) }}
+          </td>
           <td class="action-buttons">
             <button @click="onCheeseDataClick(item)">芝士</button>
             <button @click="editIndex(index)">编辑</button>
@@ -844,6 +846,51 @@
       </div>
     </div>
   </div>
+  
+  <!-- 建议仓位计算详情模态框 -->
+  <div v-if="suggestedPositionModal.show" class="modal-overlay" @click="suggestedPositionModal.show = false">
+    <div class="modal-content" style="width: 700px;" @click.stop>
+      <h3>{{ suggestedPositionModal.name }} 建议仓位计算详情</h3>
+      <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+        <p><strong>计算结果：</strong>{{ suggestedPositionModal.suggestedPosition }}</p>
+        <p><strong>当前PE值：</strong>{{ suggestedPositionModal.currentPE }}</p>
+        <br>
+        <p><strong>计算逻辑：</strong></p>
+        <p>1. 获取五年、十年和历史百分位数据</p>
+        <p>2. 计算综合百分位（加权平均：五年60%，十年30%，历史10%）</p>
+        <p>3. 根据综合百分位计算建议仓位（1 - 综合百分位）</p>
+        <br>
+        <p><strong>计算过程：</strong></p>
+        <p>• 五年百分位：{{ suggestedPositionModal.calculationDetails.fiveYearPercentile }}%</p>
+        <p>• 十年百分位：{{ suggestedPositionModal.calculationDetails.tenYearPercentile }}%</p>
+        <p>• 历史百分位：{{ suggestedPositionModal.calculationDetails.historyPercentile }}%</p>
+        <p>• 综合百分位计算：({{ suggestedPositionModal.calculationDetails.fiveYearPercentile }} × 0.6) + ({{ suggestedPositionModal.calculationDetails.tenYearPercentile }} × 0.3) + ({{ suggestedPositionModal.calculationDetails.historyPercentile }} × 0.1) = {{ suggestedPositionModal.calculationDetails.combinedPercentile }}%</p>
+        <p>• 建议仓位计算：1 - ({{ suggestedPositionModal.calculationDetails.combinedPercentile }} / 100) = {{ suggestedPositionModal.calculationDetails.finalPosition }}%</p>
+        <br>
+        <p><strong>权重说明：</strong></p>
+        <p>• 五年百分位权重60%：反映近期市场估值水平</p>
+        <p>• 十年百分位权重30%：反映中期市场估值水平</p>
+        <p>• 历史百分位权重10%：反映长期市场估值水平</p>
+        <br>
+        <p><strong>投资建议：</strong></p>
+        <div v-if="suggestedPositionModal.calculationDetails.finalPosition >= 80" style="background-color: #90ee90; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <p style="color: #006400; margin: 0;"><strong>建议大幅增持</strong>：当前估值水平较低，建议仓位{{ suggestedPositionModal.calculationDetails.finalPosition }}%，可考虑增加投资。</p>
+        </div>
+        <div v-else-if="suggestedPositionModal.calculationDetails.finalPosition >= 60" style="background-color: #e6f7ff; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <p style="color: #0050b3; margin: 0;"><strong>建议适度增持</strong>：当前估值水平适中，建议仓位{{ suggestedPositionModal.calculationDetails.finalPosition }}%，可考虑适度增加投资。</p>
+        </div>
+        <div v-else-if="suggestedPositionModal.calculationDetails.finalPosition >= 40" style="background-color: #fff7e6; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <p style="color: #d46b08; margin: 0;"><strong>建议持有观望</strong>：当前估值水平偏高，建议仓位{{ suggestedPositionModal.calculationDetails.finalPosition }}%，建议持有现有仓位观望。</p>
+        </div>
+        <div v-else style="background-color: #fff1f0; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <p style="color: #cf1322; margin: 0;"><strong>建议减持</strong>：当前估值水平很高，建议仓位{{ suggestedPositionModal.calculationDetails.finalPosition }}%，建议考虑减持部分仓位。</p>
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button @click="suggestedPositionModal.show = false" class="save-btn">关闭</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -1053,6 +1100,21 @@ export default {
       ],
       showTemperaturePositionModal: false, // 控制显示温度-仓位对照表模态框
       isTemperaturePositionTableLoaded: false, // 标记温度-仓位对照表数据是否已从存储加载
+      // 建议仓位计算详情模态框相关数据
+      suggestedPositionModal: {
+        show: false,
+        code: '',
+        name: '',
+        currentPE: '',
+        suggestedPosition: '',
+        calculationDetails: {
+          fiveYearPercentile: '',
+          tenYearPercentile: '',
+          historyPercentile: '',
+          combinedPercentile: '',
+          finalPosition: ''
+        }
+      },
     }
   },
   methods: {
@@ -2264,6 +2326,39 @@ export default {
         console.error('计算建议仓位时出错:', error);
         return 'N/A';
       }
+    },
+    // 显示建议仓位计算详情模态框
+    showSuggestedPositionModal(item) {
+      // 获取各项百分位数据
+      const fiveYearPercentile = this.getFiveYearPercentile(item.currentPE, this.codeToPeKey(item.code));
+      const tenYearPercentile = this.getTenYearPercentile(item.currentPE, this.codeToPeKey(item.code));
+      const historyPercentile = this.getHistoryPercentileForDisplay(item);
+      
+      // 计算综合百分位（加权平均）
+      const fiveYearValue = parseFloat(fiveYearPercentile) || 0;
+      const tenYearValue = parseFloat(tenYearPercentile) || 0;
+      const historyValue = parseFloat(historyPercentile) || 0;
+      const combinedPercentile = (fiveYearValue * 0.6) + (tenYearValue * 0.3) + (historyValue * 0.1);
+      
+      // 计算建议仓位（1 - 综合百分位）
+      const suggestedPositionValue = 1 - (combinedPercentile / 100);
+      const suggestedPosition = (suggestedPositionValue * 100).toFixed(0);
+      
+      // 设置模态框数据
+      this.suggestedPositionModal = {
+        show: true,
+        code: item.code,
+        name: item.name,
+        currentPE: item.currentPE,
+        suggestedPosition: suggestedPosition + '%',
+        calculationDetails: {
+          fiveYearPercentile: fiveYearPercentile,
+          tenYearPercentile: tenYearPercentile,
+          historyPercentile: historyPercentile,
+          combinedPercentile: combinedPercentile.toFixed(0),
+          finalPosition: suggestedPosition
+        }
+      };
     }
   },
   mounted() {
