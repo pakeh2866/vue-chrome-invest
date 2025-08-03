@@ -260,6 +260,7 @@
             持仓比例
             <span v-if="positionSortByRatio">↓</span>
           </th>
+          <th>关联指数</th>
           <th>建议仓位</th>
           <th>操作</th>
         </tr>
@@ -276,6 +277,12 @@
           <td>
             <span v-if="totalPositionValue > 0">
               {{ ((item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))) / totalPositionValue * 100).toFixed(2) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td>
+            <span v-if="item.relatedIndex">
+              {{ getIndexNameByCode(item.relatedIndex) }}
             </span>
             <span v-else>--</span>
           </td>
@@ -394,6 +401,13 @@
           <div class="form-group">
             <label>持仓价格</label>
             <input v-model.number="newPosition.price" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>关联指数</label>
+            <select v-model="newPosition.relatedIndex">
+              <option value="">请选择关联指数</option>
+              <option v-for="index in indexData" :key="index.code" :value="index.code">{{ index.name }} ({{ index.code }})</option>
+            </select>
           </div>
         </div>
         <div class="modal-buttons">
@@ -1046,7 +1060,8 @@ export default {
         code: '',
         name: '',
         amount: 0,
-        price: 0
+        price: 0,
+        relatedIndex: '' // 新增：关联指数
       },
       positions: [], // 新增：持仓数据数组
       categoryOptions: [
@@ -1308,7 +1323,8 @@ export default {
         code: '',
         name: '',
         amount: 0,
-        price: 0
+        price: 0,
+        relatedIndex: '' // 新增：关联指数
       };
       this.originalPositions = this.positions.slice(); // 新增：保存原始顺序
     },
@@ -2359,6 +2375,12 @@ export default {
           finalPosition: suggestedPosition
         }
       };
+    },
+    // 根据指数代码获取指数名称
+    getIndexNameByCode(code) {
+      if (!code) return '';
+      const index = this.indexData.find(item => item.code === code);
+      return index ? `${index.name} (${index.code})` : code;
     }
   },
   mounted() {
