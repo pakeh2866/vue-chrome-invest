@@ -1,1095 +1,2444 @@
 <template>
-    <h1>vue-chrome-extension-template</h1>
-    <h2>options view</h2>
+  <button @click="fetchData">获取数据</button>
+  <button @click="exportData" style="margin-left: 10px;">导出数据</button>
+  <input type="file" ref="importFile" style="display:none" @change="importData" accept=".json" />
+  <button @click="triggerImport" style="margin-left: 10px;">导入数据</button>
+  <h2>
+    整体温度数据
+    <span v-if="haomaiDate" style="font-size:14px;color:#888;margin-left:10px;">
+      ({{ haomaiDate }})
+    </span>
+    <span style="font-size:14px;color:#888;margin-left:10px;cursor:pointer;text-decoration:underline;" @click="openPositionLogicModal">
+     建议A股仓位：{{ suggestedPositionAH }}
+   </span>
+  </h2>
+  <table>
+    <thead>
+      <tr>
+        <th>温度类型</th>
+        <th>今日温度</th>
+        <th>历史百分位</th>
+        <th>2015-6-12</th>
+        <th>2019-1-2</th>
+        <th>2021-2-19</th>
+        <th>2022-4-26</th>
+        <th>2022-10-31</th>
+        <th>2024-2-5</th>
+        <th>2024-9-13</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="(item, index) in temperatureData" :key="index">
+        <td>{{ item.name }}</td>
+        <td>{{ item.temperature }}</td>
+        <td>{{ item.yield }}</td>
+        <td v-for="date in ['2015-6-12', '2019-1-2', '2021-2-19', '2022-4-26', '2022-10-31', '2024-2-5', '2024-9-13']" :key="date" :class="{ 'highlight': item[`${date}_isNext`], 'deep-green': (date === '2019-1-2' && shouldHighlight2019) || (date === '2024-2-5' && shouldHighlight2024) }">
+          {{ item[date] || 'N/A' }}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <h2 style="margin-right: 10px;">指数参考</h2>
+        <button @click="addIndex">新增指数</button>
+        <button @click="fetchZsData" style="margin-left: 10px;">一键zs数据</button>
+      </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>指数名称</th>
+          <th>代码</th>
+          <th>现指数点位</th>
+          <th>支撑点位</th>
+          <th>距离支撑</th>
+          <th>近年最低</th>
+          <th>已反弹</th>
+          <th>前高</th>
+          <th>最大跌幅</th>
+          <th>极度价值</th>
+          <th>价值区间下沿</th>
+          <th>价值区间上沿</th>
+          <th>正常区间下沿</th>
+          <th>正常区间上沿</th>
+          <th>压力位</th>
+          <th>TX市盈率</th>
+          <th>五年平均值</th>
+          <th>五年百分位</th>
+          <th>十年平均值</th>
+          <th>历史百分位</th>
+          <th>zs市盈率</th>
+          <th>zs百分位</th>
+          <th>建议仓位</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(item, index) in indexData" :key="index">
+          <td>{{ item.name }}</td>
+          <td>{{ item.code }}</td>
+          <td :style="{ backgroundColor: getIndexColor(item), color: (getIndexColor(item) === '#006400' || getIndexColor(item) === '#ff4d4f') ? '#fff' : '#000' }">
+            {{ item.currentIndexPoint }}
+          </td>
+          <td>{{ item.supportLevel }}</td>
+          <td>
+            <span v-if="item.currentIndexPoint && item.supportLevel && item.supportLevel != 0">
+              {{ (((item.currentIndexPoint - item.supportLevel) / item.supportLevel) * 100).toFixed(2) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td>{{ item.recentLowest }}</td>
+          <td>
+            <span v-if="item.currentIndexPoint && item.recentLowest && item.recentLowest != 0">
+              {{ (((item.currentIndexPoint - item.recentLowest) / item.recentLowest) * 100).toFixed(2) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td>{{ item.previousHigh }}</td>
+          <td
+            :style="item.currentIndexPoint && item.previousHigh && item.previousHigh != 0 && (((item.currentIndexPoint - item.previousHigh) / item.previousHigh) * 100) <= -70 ? { backgroundColor: '#90ee90', borderRight: '3px solid #333' } : { borderRight: '3px solid #333' }"
+          >
+            <span v-if="item.currentIndexPoint && item.previousHigh && item.previousHigh != 0">
+              {{ (((item.currentIndexPoint - item.previousHigh) / item.previousHigh) * 100).toFixed(2) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.extremeValue && item.currentIndexPoint < item.extremeValue ? '#006400' : '', color: item.currentIndexPoint && item.extremeValue && item.currentIndexPoint < item.extremeValue ? '#fff' : '' }">
+            {{ item.extremeValue }}
+          </td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#90ee90' : '', color: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#000' : '' }">
+            {{ item.valueRangeLower }}
+          </td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#90ee90' : '', color: item.currentIndexPoint && item.valueRangeLower && item.valueRangeUpper && item.currentIndexPoint >= item.valueRangeLower && item.currentIndexPoint <= item.valueRangeUpper ? '#000' : '' }">
+            {{ item.valueRangeUpper }}
+          </td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#ffe066' : '', color: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#000' : '' }">
+            {{ item.normalRangeLower }}
+          </td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#ffe066' : '', color: item.currentIndexPoint && item.normalRangeLower && item.normalRangeUpper && item.currentIndexPoint >= item.normalRangeLower && item.currentIndexPoint <= item.normalRangeUpper ? '#000' : '' }">
+            {{ item.normalRangeUpper }}
+          </td>
+          <td :style="{ backgroundColor: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#ff4d4f' : '', color: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#fff' : '', borderRight: '3px solid #333' }">
+            {{ item.pressureLevel }}
+          </td>
+          <td :style="{
+            color: isPERatioExceeded(item.currentPE, getLatestPe(codeToPeKey(item.code))) ? 'red' : '',
+            backgroundColor: item.currentPE && getFiveYearAverage(codeToPeKey(item.code)) !== '--' && parseFloat(item.currentPE) < parseFloat(getFiveYearAverage(codeToPeKey(item.code))) ? 'lightgreen' : ''
+          }">{{ item.currentPE }}</td>
+          <td style="cursor: pointer; text-decoration: underline;" @click="showFiveYearAverageModal(item)">
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getFiveYearAverage(codeToPeKey(item.code)) }}
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td style="cursor: pointer; text-decoration: underline;"
+              :style="{ backgroundColor: getFiveYearPercentileColor(item) }"
+              @click="showFiveYearPercentileModal(item)">
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getFiveYearPercentile(item.currentPE, codeToPeKey(item.code)) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td style="cursor: pointer; text-decoration: underline;" @click="showTenYearAverageModal(item)">
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getTenYearAverage(codeToPeKey(item.code)) }}
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td style="cursor: pointer; text-decoration: underline;"
+              :style="{ backgroundColor: getHistoryPercentileColor(item) }"
+              @click="showHistoryPercentileModal(item)">
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getHistoryPercentileForDisplay(item) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td
+            @mouseenter="showTooltip($event, getLatestPeWithDate(codeToPeKey(item.code)).date)"
+            @mouseleave="hideTooltip"
+            :style="{
+              backgroundColor: peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0 && getFiveYearAverage(codeToPeKey(item.code)) !== '--' && getLatestPe(codeToPeKey(item.code)) < parseFloat(getFiveYearAverage(codeToPeKey(item.code))) ? 'lightgreen' : ''
+            }"
+          >
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getLatestPe(codeToPeKey(item.code)) }}
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td>
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getPercentile(getLatestPe(codeToPeKey(item.code)), peValuesMap[codeToPeKey(item.code)]) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td>{{ item.suggestedPosition }}</td>
+          <td class="action-buttons">
+            <button @click="onCheeseDataClick(item)">芝士</button>
+            <button @click="editIndex(index)">编辑</button>
+            <button @click="deleteIndex(index)">删除</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin: 10px 0;">
+      <span style="background:#006400;color:#fff;padding:2px 8px;">极度价值</span>
+      <span style="background:#90ee90;padding:2px 8px;">价值区间</span>
+      <span style="background:#ffe066;padding:2px 8px;">正常区间</span>
+      <span style="background:#ffa940;padding:2px 8px;">接近压力位</span>
+      <span style="background:#ff4d4f;color:#fff;padding:2px 8px;">压力位以上</span>
+    </div>
+
+    <!-- 新增持仓表格 -->
+    <div style="display: flex; align-items: center; margin-top: 30px;">
+      <h2 style="margin-right: 10px;">持仓表格</h2>
+      <!-- 金额显示容器 -->
+      <div style="margin-right: 20px; background-color: #e8f4f8; padding: 8px 12px; border-radius: 4px;">
+        <!-- 总持仓金额显示 -->
+        <div style="font-weight: bold; font-size: 15px;">
+          总持仓金额：{{ totalPositionValue.toFixed(2) }}
+        </div>
+        <!-- 单份金额显示 -->
+        <div style="font-weight: bold; font-size: 15px; margin-top: 5px;">
+          单份金额：{{ Math.floor(totalPositionValue / 150) }}
+        </div>
+      </div>
+      <!-- 分类持仓比例显示 -->
+      <div style="font-size: 14px; margin-right: 20px;">
+        <div style="background-color: #f5f5f5; padding: 12px; border-radius: 6px; display: flex; gap: 30px; max-width: 600px;">
+          <div>
+            <div style="font-weight: bold; margin-bottom: 8px; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 4px;">大类分布</div>
+            <div v-for="(ratio, category) in categoryRatios" :key="category" style="margin-bottom: 5px;">
+              <span
+                :style="category === '现金' && parseFloat(ratio) > 25 ? { backgroundColor: 'red', color: 'white', padding: '0 4px', borderRadius: '2px' } : { fontWeight: 'bold', color: '#333' }"
+              >
+                {{ category }}:
+              </span>
+              <span :style="category === '现金' && parseFloat(ratio) > 25 ? { backgroundColor: 'red', color: 'white', padding: '0 4px', borderRadius: '2px' } : {}">
+                {{ ratio }}%
+              </span>
+            </div>
+          </div>
+          <div>
+            <div style="font-weight: bold; margin-bottom: 8px; color: #2c3e50; border-bottom: 1px solid #ddd; padding-bottom: 4px;">小类分布</div>
+            <div v-for="(ratio, subCategory) in filteredSubCategoryRatios" :key="subCategory" style="margin-bottom: 3px; margin-left: 10px; color: #666;">
+              {{ subCategory }}: {{ ratio }}%
+            </div>
+            <div v-if="equityAStockRatio"
+                 style="margin-bottom: 3px; margin-left: 10px; color: #666;"
+                 :style="shouldHighlightEquityAStock ? { backgroundColor: 'red', color: 'white', padding: '0 4px', borderRadius: '2px' } : {}">
+              权益类-A股ETF+A股个股: {{ equityAStockRatio }}%
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-left: auto; display: flex; gap: 10px;">
+        <button @click="showAddPositionModal = true">增加持仓</button>
+        <button @click="updateMarket" style="margin-left: 10px;">更新行情</button>
+      </div>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>分类</th>
+          <th>股票代码</th>
+          <th>股票名称</th>
+          <th>持仓数量</th>
+          <th>持仓价格</th>
+          <th>现价</th>
+          <th>持仓价值</th>
+          <th @click="togglePositionSort" style="cursor:pointer;">
+            持仓比例
+            <span v-if="positionSortByRatio">↓</span>
+          </th>
+          <th>建议仓位</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(item, idx) in positions" :key="idx">
+          <td>{{ item.category }}<span v-if="item.subCategory">-{{ item.subCategory }}</span></td>
+          <td>{{ item.code }}</td>
+          <td>{{ item.name }}</td>
+          <td>{{ item.amount }}</td>
+          <td>{{ item.price }}</td>
+          <td>{{ item.category === '现金' ? 1 : (item.currentPrice || '--') }}</td> <!-- 现价：现金固定为1 -->
+          <td>{{ (item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))).toFixed(2) }}</td> <!-- 持仓价值：现金现价为1 -->
+          <td>
+            <span v-if="totalPositionValue > 0">
+              {{ ((item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))) / totalPositionValue * 100).toFixed(2) }}%
+            </span>
+            <span v-else>--</span>
+          </td>
+          <td>--</td> <!-- 建议仓位：如需可后续补充 -->
+          <td>
+            <!-- 新增编辑按钮 -->
+            <div style="display: flex; gap: 6px;">
+              <button @click="editPosition(idx)">编辑</button>
+              <button @click="deletePosition(idx)">删除</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 新增指数模态框 -->
+    <div v-if="showAddIndexModal" class="modal-overlay">
+      <div class="modal-content">
+        <h3>{{ isEditing ? '编辑指数' : '添加指数' }}</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>指数名称</label>
+            <input v-model="newIndexData.name" type="text" placeholder="请输入指数名称">
+          </div>
+          <div class="form-group">
+            <label>代码</label>
+            <input v-model="newIndexData.code" type="text" placeholder="请输入代码">
+          </div>
+          <div class="form-group">
+            <label>现指数点位</label>
+            <input v-model.number="newIndexData.currentIndexPoint" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>支撑点位</label>
+            <input v-model.number="newIndexData.supportLevel" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>近两年最低</label>
+            <input v-model.number="newIndexData.twoYearLow" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>已反弹</label>
+            <input v-model.number="newIndexData.reboundHigh" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>前高</label>
+            <input v-model.number="newIndexData.previousHigh" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>极度价值</label>
+            <input v-model="newIndexData.extremeValue" type="text" placeholder="请输入极度价值">
+          </div>
+          <div class="form-group">
+            <label>价值区间下沿</label>
+            <input v-model="newIndexData.valueRangeLower" type="text" placeholder="请输入价值区间下沿">
+          </div>
+          <div class="form-group">
+            <label>价值区间上沿</label>
+            <input v-model="newIndexData.valueRangeUpper" type="text" placeholder="请输入价值区间上沿">
+          </div>
+          <div class="form-group">
+            <label>正常区间下沿</label>
+            <input v-model="newIndexData.normalRangeLower" type="text" placeholder="请输入正常区间下沿">
+          </div>
+          <div class="form-group">
+            <label>正常区间上沿</label>
+            <input v-model="newIndexData.normalRangeUpper" type="text" placeholder="请输入正常区间上沿">
+          </div>
+          <div class="form-group">
+            <label>压力位</label>
+            <input v-model.number="newIndexData.pressureLevel" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>芝士链接</label>
+            <input v-model="newIndexData.cheeseUrl" type="text" placeholder="请输入芝士链接">
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button @click="cancelAddIndex" class="cancel-btn">取消</button>
+          <button @click="saveIndex" class="save-btn">{{ isEditing ? '更新' : '保存' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 持仓新增弹窗 -->
+    <div v-if="showAddPositionModal" class="modal-overlay" @keydown.enter="savePosition">
+      <div class="modal-content">
+        <h3>{{ isEditingPosition ? '编辑持仓' : '新增持仓' }}</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>分类</label>
+            <select v-model="newPosition.category">
+              <option value="" disabled>请选择大类</option>
+              <option v-for="cat in categoryOptions" :key="cat.label" :value="cat.label">{{ cat.label }}</option>
+            </select>
+          </div>
+          <div class="form-group" v-if="newPosition.category">
+            <label>子分类</label>
+            <select v-model="newPosition.subCategory">
+              <option value="" disabled>请选择子类</option>
+              <option v-for="sub in (categoryOptions.find(c => c.label === newPosition.category)?.children || [])" :key="sub.value" :value="sub.value">{{ sub.label }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>股票代码</label>
+            <input v-model="newPosition.code" type="text" placeholder="输入股票代码">
+          </div>
+          <div class="form-group">
+            <label>股票名称</label>
+            <input v-model="newPosition.name" type="text" placeholder="输入股票名称">
+          </div>
+          <div class="form-group">
+            <label>持仓数量</label>
+            <input v-model.number="newPosition.amount" type="number" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>持仓价格</label>
+            <input v-model.number="newPosition.price" type="number" placeholder="0">
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button @click="showAddPositionModal = false" class="cancel-btn">取消</button>
+          <button @click="savePosition" class="save-btn">保存</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 建议仓位逻辑说明模态框 -->
+    <div v-if="showPositionLogicModal" class="modal-overlay">
+     <div class="modal-content" style="width: 500px;">
+       <h3>建议A股仓位计算逻辑</h3>
+       <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+          <p><strong>计算公式：</strong></p>
+          <p>1. 计算平均温度 = (有知有行温度 + 好买温度) / 2</p>
+          <p>2. 根据平均温度在温度-仓位对照表中进行线性插值计算建议仓位</p>
+          <br>
+          <p><strong>数据来源：</strong></p>
+          <p>• 有知有行温度：{{ temperatureData[0]?.temperature || 'N/A' }}</p>
+          <p>• 好买温度：{{ temperatureData[1]?.temperature || 'N/A' }}</p>
+          <br>
+          <p><strong>计算过程：</strong></p>
+          <p v-if="temperatureData && temperatureData.length >= 2">
+            平均温度 = ({{ parseFloat(temperatureData[0]?.temperature) || 'N/A' }} + {{ parseFloat(temperatureData[1]?.temperature) || 'N/A' }}) / 2<br>
+            = {{ (parseFloat(temperatureData[0]?.temperature) + parseFloat(temperatureData[1]?.temperature)) / 2 || 'N/A' }}<br>
+            建议仓位 = {{ suggestedPositionAH }}<br>
+          </p>
+          <p v-else>数据尚未加载完成</p>
+          <br>
+          <p><strong>温度-仓位对照表：</strong></p>
+          <div style="width: 100%; height: 300px; margin-top: 10px;">
+            <canvas id="temperaturePositionChart" width="400" height="300"></canvas>
+          </div>
+          <p>点击下方按钮可编辑温度-仓位对照表</p>
+          <button @click="showTemperaturePositionModal = true" style="background-color: #42b983; color: white; border: none; padding: 8px 16px; cursor: pointer; margin-top: 10px;">编辑对照表</button>
+        </div>
+        <div class="modal-buttons">
+          <button @click="closePositionLogicModal" class="save-btn">关闭</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 温度-仓位对照表模态框 -->
+    <div v-if="showTemperaturePositionModal" class="modal-overlay">
+      <div class="modal-content" style="width: 500px;">
+        <h3>温度-仓位对照表</h3>
+        <div style="text-align: left; font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
+          <p>根据当前温度在对照表中进行线性插值计算建议仓位</p>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">温度</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">仓位 (%)</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, index) in temperaturePositionTable" :key="index">
+              <td style="border: 1px solid #ddd; padding: 8px;">
+                <input v-model.number="item.temperature" type="number" min="0" max="100" style="width: 60px;" />
+              </td>
+              <td style="border: 1px solid #ddd; padding: 8px;">
+                <input v-model.number="item.position" type="number" min="0" max="100" style="width: 60px;" />
+              </td>
+              <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
+                <button @click="deleteTemperaturePositionRow(index)" style="background-color: #ff4d4f; color: white; border: none; padding: 4px 8px; cursor: pointer;">删除</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="margin-bottom: 15px;">
+          <button @click="addTemperaturePositionRow" style="background-color: #42b983; color: white; border: none; padding: 8px 16px; cursor: pointer;">添加行</button>
+        </div>
+        <div class="modal-buttons">
+          <button @click="showTemperaturePositionModal = false" class="cancel-btn">取消</button>
+          <button @click="saveTemperaturePositionTable" class="save-btn">保存</button>
+        </div>
+      </div>
+    </div>
+  <!-- 自定义提示框 -->
+  <div v-if="tooltip.show" class="custom-tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
+    {{ tooltip.text }}
+  </div>
+
+  <!-- 图表容器 -->
+  <div style="margin-top: 20px;">
+    <canvas id="myChart" width="400" height="200"></canvas>
+  </div>
+  
+  <!-- 十年平均值计算详情模态框 -->
+  <div v-if="tenYearAverageModal.show" class="modal-overlay" @click="tenYearAverageModal.show = false">
+    <div class="modal-content" style="width: 600px;" @click.stop>
+      <h3>{{ tenYearAverageModal.name }} 十年平均值计算详情</h3>
+      <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+        <p><strong>计算结果：</strong>{{ tenYearAverageModal.tenYearAverage }}</p>
+        <br>
+        <p><strong>计算逻辑：</strong></p>
+        <p>1. 获取当前日期到十年前的历史市盈率数据</p>
+        <p>2. 过滤出有效数据（去除无效日期和PE值）</p>
+        <p>3. 计算所有有效数据的算术平均值</p>
+        <br>
+        <p><strong>计算过程：</strong></p>
+        <p>• 数据时间范围：{{ tenYearAverageModal.calculationDetails.startDate }} 至 {{ tenYearAverageModal.calculationDetails.endDate }}</p>
+        <p>• 有效数据数量：{{ tenYearAverageModal.calculationDetails.dataCount }}</p>
+        <p>• PE值总和：{{ tenYearAverageModal.calculationDetails.sum.toFixed(2) }}</p>
+        <p>• 平均值计算：{{ tenYearAverageModal.calculationDetails.sum.toFixed(2) }} ÷ {{ tenYearAverageModal.calculationDetails.dataCount }} = {{ tenYearAverageModal.calculationDetails.average.toFixed(2) }}</p>
+        <br>
+        <p><strong>数据样本（随机10条，按日期排序）：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(data, index) in tenYearAverageModal.calculationDetails.dataSample" :key="index">
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.date }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.pe }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-buttons">
+        <button @click="tenYearAverageModal.show = false" class="save-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 五年平均值计算详情模态框 -->
+  <div v-if="fiveYearAverageModal.show" class="modal-overlay" @click="fiveYearAverageModal.show = false">
+    <div class="modal-content" style="width: 600px;" @click.stop>
+      <h3>{{ fiveYearAverageModal.name }} 五年平均值计算详情</h3>
+      <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+        <p><strong>计算结果：</strong>{{ fiveYearAverageModal.fiveYearAverage }}</p>
+        <br>
+        <p><strong>计算逻辑：</strong></p>
+        <p>1. 获取当前日期到五年前的历史市盈率数据</p>
+        <p>2. 过滤出有效数据（去除无效日期和PE值）</p>
+        <p>3. 计算所有有效数据的算术平均值</p>
+        <br>
+        <p><strong>计算过程：</strong></p>
+        <p>• 数据时间范围：{{ fiveYearAverageModal.calculationDetails.startDate }} 至 {{ fiveYearAverageModal.calculationDetails.endDate }}</p>
+        <p>• 有效数据数量：{{ fiveYearAverageModal.calculationDetails.dataCount }}</p>
+        <p>• PE值总和：{{ fiveYearAverageModal.calculationDetails.sum.toFixed(2) }}</p>
+        <p>• 平均值计算：{{ fiveYearAverageModal.calculationDetails.sum.toFixed(2) }} ÷ {{ fiveYearAverageModal.calculationDetails.dataCount }} = {{ fiveYearAverageModal.calculationDetails.average.toFixed(2) }}</p>
+        <br>
+        <p><strong>数据样本（随机10条，按日期排序）：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(data, index) in fiveYearAverageModal.calculationDetails.dataSample" :key="index">
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.date }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.pe }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-buttons">
+        <button @click="fiveYearAverageModal.show = false" class="save-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 五年百分位计算详情模态框 -->
+  <div v-if="fiveYearPercentileModal.show" class="modal-overlay" @click="fiveYearPercentileModal.show = false">
+    <div class="modal-content" style="width: 700px;" @click.stop>
+      <h3>{{ fiveYearPercentileModal.name }} 五年百分位计算详情</h3>
+      <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+        <p><strong>计算结果：</strong>{{ fiveYearPercentileModal.percentile }}%</p>
+        <p><strong>当前PE值：</strong>{{ fiveYearPercentileModal.currentPE }}</p>
+        <div v-if="fiveYearPercentileModal.usedZsPE" style="background-color: #fff3cd; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <p style="color: #856404; margin: 0;"><strong>注意：</strong>由于TX市盈率为0或与zs市盈率差距超过10%，本次计算采用了zs市盈率。</p>
+          <p style="color: #856404; margin: 5px 0 0 0;">TX市盈率：{{ fiveYearPercentileModal.originalPE }}，zs市盈率：{{ fiveYearPercentileModal.zsPE }}</p>
+        </div>
+        <br>
+        <p><strong>计算逻辑：</strong></p>
+        <p>1. 获取当前日期到五年前的历史市盈率数据</p>
+        <p>2. 过滤出有效数据（去除无效日期和PE值）</p>
+        <p>3. 计算当前PE值在历史数据中的百分位位置</p>
+        <br>
+        <p><strong>计算过程：</strong></p>
+        <p>• 数据时间范围：{{ fiveYearPercentileModal.calculationDetails.startDate }} 至 {{ fiveYearPercentileModal.calculationDetails.endDate }}</p>
+        <p>• 有效数据数量：{{ fiveYearPercentileModal.calculationDetails.dataCount }}</p>
+        <p>• 当前PE值：{{ fiveYearPercentileModal.currentPE }}</p>
+        <p>• 历史数据中小于当前PE值的数量：{{ fiveYearPercentileModal.calculationDetails.lowerCount }}</p>
+        <p>• 百分位计算：({{ fiveYearPercentileModal.calculationDetails.lowerCount }} ÷ {{ fiveYearPercentileModal.calculationDetails.dataCount }}) × 100 = {{ fiveYearPercentileModal.percentile }}%</p>
+        <br>
+        <p><strong>不同百分位的PE值：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">百分位</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">0% (最小值)</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ fiveYearPercentileModal.calculationDetails.percentileValues['0'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">五年内最低PE值</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">10%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ fiveYearPercentileModal.calculationDetails.percentileValues['10'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中10%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">25%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ fiveYearPercentileModal.calculationDetails.percentileValues['25'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中25%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">50% (中位数)</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ fiveYearPercentileModal.calculationDetails.percentileValues['50'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中50%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">75%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ fiveYearPercentileModal.calculationDetails.percentileValues['75'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中75%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">90%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ fiveYearPercentileModal.calculationDetails.percentileValues['90'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中90%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">100% (最大值)</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ fiveYearPercentileModal.calculationDetails.percentileValues['100'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">五年内最高PE值</td>
+            </tr>
+          </tbody>
+        </table>
+        <br>
+        <p><strong>数据样本（随机10条，按日期排序）：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(data, index) in fiveYearPercentileModal.calculationDetails.dataSample" :key="index">
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.date }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.pe }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-buttons">
+        <button @click="fiveYearPercentileModal.show = false" class="save-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 历史百分位计算详情模态框 -->
+  <div v-if="historyPercentileModal.show" class="modal-overlay" @click="historyPercentileModal.show = false">
+    <div class="modal-content" style="width: 700px;" @click.stop>
+      <h3>{{ historyPercentileModal.name }} 历史百分位计算详情</h3>
+      <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+        <p><strong>计算结果：</strong>{{ historyPercentileModal.percentile }}%</p>
+        <p><strong>当前PE值：</strong>{{ historyPercentileModal.currentPE }}</p>
+        <div v-if="historyPercentileModal.usedZsPE" style="background-color: #fff3cd; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+          <p style="color: #856404; margin: 0;"><strong>注意：</strong>由于TX市盈率为0或与zs市盈率差距超过10%，本次计算采用了zs市盈率。</p>
+          <p style="color: #856404; margin: 5px 0 0 0;">TX市盈率：{{ historyPercentileModal.originalPE }}，zs市盈率：{{ historyPercentileModal.zsPE }}</p>
+        </div>
+        <br>
+        <p><strong>计算逻辑：</strong></p>
+        <p>1. 获取所有历史市盈率数据</p>
+        <p>2. 过滤出有效数据（去除无效日期和PE值）</p>
+        <p>3. 计算当前PE值在历史数据中的百分位位置</p>
+        <br>
+        <p><strong>计算过程：</strong></p>
+        <p>• 数据时间范围：{{ historyPercentileModal.calculationDetails.startDate }} 至 {{ historyPercentileModal.calculationDetails.endDate }}</p>
+        <p>• 有效数据数量：{{ historyPercentileModal.calculationDetails.dataCount }}</p>
+        <p>• 当前PE值：{{ historyPercentileModal.currentPE }}</p>
+        <p>• 历史数据中小于当前PE值的数量：{{ historyPercentileModal.calculationDetails.lowerCount }}</p>
+        <p>• 百分位计算：({{ historyPercentileModal.calculationDetails.lowerCount }} ÷ {{ historyPercentileModal.calculationDetails.dataCount }}) × 100 = {{ historyPercentileModal.percentile }}%</p>
+        <br>
+        <p><strong>不同百分位的PE值：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">百分位</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">0% (最小值)</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['0'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史最低PE值</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">10%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['10'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中10%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">25%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['25'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中25%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">50% (中位数)</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['50'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中50%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">75%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['75'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中75%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">90%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['90'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史中90%的时间PE值低于此水平</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">100% (最大值)</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['100'] || 'N/A' }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">历史最高PE值</td>
+            </tr>
+          </tbody>
+        </table>
+        <br>
+        <p><strong>数据样本（随机10条，按日期排序）：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(data, index) in historyPercentileModal.calculationDetails.dataSample" :key="index">
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.date }}</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">{{ data.pe }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-buttons">
+        <button @click="historyPercentileModal.show = false" class="save-btn">关闭</button>
+      </div>
+    </div>
+  </div>
 </template>
+
 <script>
+
+// 定义你要打开的多个页面的 URL 列表
+const targetUrls = [
+    "https://youzhiyouxing.cn/data", // 替换为你的第一个目标网站 URL
+    "https://stock.cheesefortune.com/",  // 替换为你的第二个目标网站 URL
+    "https://youzhiyouxing.cn/data/market", // 如果有更多，可以在这里添加
+    "https://trade.ehowbuy.com/vue-newpig/tool/thermometerDetail"
+];
+
+// 用于存储图表实例
+let temperaturePositionChart = null;
+
+export default {
+  data() {
+    return {
+      showAddIndexModal: false,
+      isEditing: false,
+      currentEditIndex: -1,
+      // 添加提示框相关数据
+      tooltip: {
+        show: false,
+        text: '',
+        x: 0,
+        y: 0
+      },
+      // 十年平均值模态框相关数据
+      tenYearAverageModal: {
+        show: false,
+        code: '',
+        name: '',
+        tenYearAverage: '',
+        calculationDetails: {
+          startDate: '',
+          endDate: '',
+          dataCount: 0,
+          sum: 0,
+          average: 0,
+          dataSample: []
+        }
+      },
+      // 五年平均值模态框相关数据
+      fiveYearAverageModal: {
+        show: false,
+        code: '',
+        name: '',
+        fiveYearAverage: '',
+        calculationDetails: {
+          startDate: '',
+          endDate: '',
+          dataCount: 0,
+          sum: 0,
+          average: 0,
+          dataSample: []
+        }
+      },
+      // 五年百分位模态框相关数据
+      fiveYearPercentileModal: {
+        show: false,
+        code: '',
+        name: '',
+        currentPE: '',
+        percentile: '',
+        calculationDetails: {
+          startDate: '',
+          endDate: '',
+          dataCount: 0,
+          percentileValues: {},
+          dataSample: []
+        }
+      },
+      // 历史百分位模态框相关数据
+      historyPercentileModal: {
+        show: false,
+        code: '',
+        name: '',
+        currentPE: '',
+        percentile: '',
+        calculationDetails: {
+          startDate: '',
+          endDate: '',
+          dataCount: 0,
+          percentileValues: {},
+          dataSample: []
+        }
+      },
+      newIndexData: {
+        name: '',
+        code: '',
+        currentIndexPoint: 0,
+        supportLevel: 0,
+        twoYearLow: 0,
+        previousHigh: 0,
+        extremeValue: '',
+        valueRangeLower: '',
+        valueRangeUpper: '',
+        normalRangeLower: '',
+        normalRangeUpper: '',
+        pressureLevel: 0,
+        cheeseUrl: '',
+        reboundHigh: 0
+      },
+      indexData: [],
+      targetUrls,
+      temperatureData: [
+          {
+            name: '有知有行数据',
+            temperature: '',
+            yield: '',
+          },
+          {
+            name: '好买温度',
+            temperature: '',
+            yield: '暂无数据',
+            '2015-6-12': '96.4',
+            '2019-1-2': '3.1',
+            '2021-2-19': '86.5',
+            '2022-4-26': '6.6',
+            '2022-10-31': '4.2',
+            '2024-2-5': '9.9',
+            '2024-9-13': '7.3'
+          }
+        ],
+      shouldHighlight2019: false,
+      shouldHighlight2024: false,
+      todayTempValue: 0,
+      haomaiDate: '', // 新增
+      showAddPositionModal: false,
+      newPosition: {
+        category: '',
+        subCategory: '', // 新增：二级分类
+        code: '',
+        name: '',
+        amount: 0,
+        price: 0
+      },
+      positions: [], // 新增：持仓数据数组
+      categoryOptions: [
+        {
+          label: '权益类',
+          children: [
+            { label: 'A股个股', value: 'A股个股' },
+            { label: 'A股ETF', value: 'A股ETF' },
+            { label: '港股ETF', value: '港股ETF' },
+            { label: '海外ETF', value: '海外ETF' }
+          ]
+        },
+        {
+          label: '债券类',
+          children: [
+            { label: '可转债', value: '可转债' },
+            { label: '债券ETF', value: '债券ETF' }
+          ]
+        },
+        {
+          label: '商品类',
+          children: [
+            { label: '原油', value: '原油' },
+            { label: '黄金', value: '黄金' },
+            { label: '其他', value: '其他' }
+          ]
+        },
+        {
+          label: '现金',
+          children: [
+            { label: '现金', value: '现金' }
+          ]
+        }
+      ],
+      isEditingPosition: false,
+      currentEditPositionIndex: -1,
+      totalPositionValue: 0, // 新增：总持仓价值
+      peValuesMap: {}, // code -> pe历史数组
+      rawPeData: {}, // 新增：原始pe数据，用于获取最新pe
+      positionSortByRatio: false, // 是否按持仓比例排序
+      originalPositions: [],      // 保存原始顺序
+      showPositionLogicModal: false, // 控制显示建议仓位逻辑的模态框
+      // 温度-仓位对照表
+      temperaturePositionTable: [
+        { temperature: 0, position: 100 },
+        { temperature: 20, position: 80 },
+        { temperature: 40, position: 60 },
+        { temperature: 60, position: 40 },
+        { temperature: 80, position: 20 },
+        { temperature: 100, position: 0 }
+      ],
+      showTemperaturePositionModal: false, // 控制显示温度-仓位对照表模态框
+      isTemperaturePositionTableLoaded: false, // 标记温度-仓位对照表数据是否已从存储加载
+    }
+  },
+  methods: {
+    // 编辑指数，弹出编辑模态框并填充数据
+    editIndex(index) {
+      const item = this.indexData[index];
+  this.newIndexData = {
+    ...item,
+    currentIndexPoint: item.viewPoint !== undefined ? item.viewPoint : item.currentIndexPoint,
+    cheeseUrl: item.cheeseUrl || ''
+  };
+  delete this.newIndexData.viewPoint;
+      this.showAddIndexModal = true;
+      this.isEditing = true;
+      this.currentEditIndex = index;
+    },
+
+    // 删除某条指数数据
+    deleteIndex(index) {
+      if (confirm('确定要删除这条指数数据吗？')) {
+        this.indexData.splice(index, 1);
+        chrome.storage.local.set({ 'indexData': this.indexData }, () => {
+          console.log('指数数据已删除');
+        });
+      }
+    },
+
+    // 新增指数，弹出新增模态框
+    addIndex() {
+      this.showAddIndexModal = true;
+    },
+
+    // 保存指数（新增或编辑后）
+    saveIndex() {
+      // 验证必填字段
+      if (!this.newIndexData.name || !this.newIndexData.code) {
+        alert('指数名称和代码为必填项');
+        return;
+      }
+      
+      if (this.isEditing) {
+        // 更新现有指数
+        this.indexData[this.currentEditIndex] = {
+          ...this.newIndexData,
+          distanceToSupport: this.calculateDistanceToSupport(),
+          recentLowest: this.newIndexData.twoYearLow,
+          reboundHigh: this.newIndexData.reboundHigh,
+          previousHigh: this.newIndexData.previousHigh,
+          maxDrawdown: this.indexData[this.currentEditIndex].maxDrawdown,
+          currentPE: this.indexData[this.currentEditIndex].currentPE,
+          suggestedPosition: this.indexData[this.currentEditIndex].suggestedPosition
+        };
+        this.isEditing = false;
+        this.currentEditIndex = -1;
+      } else {
+        // 添加新指数
+        this.indexData.push({
+          ...this.newIndexData,
+          distanceToSupport: this.calculateDistanceToSupport(),
+          recentLowest: this.newIndexData.twoYearLow,
+          reboundHigh: this.newIndexData.reboundHigh,
+          previousHigh: this.newIndexData.previousHigh,
+          maxDrawdown: 0,
+          currentPE: 0,
+          suggestedPosition: '0%'
+        });
+      }
+      
+      // 保存到本地存储
+      chrome.storage.local.set({ 'indexData': this.indexData }, () => {
+        console.log(this.isEditing ? '指数数据已更新' : '指数数据已保存');
+      });
+      
+      // 重置表单并关闭模态框
+      this.resetForm();
+      this.showAddIndexModal = false;
+    },
+
+    // 取消新增/编辑指数，重置表单
+    cancelAddIndex() {
+      this.resetForm();
+      this.showAddIndexModal = false;
+    },
+
+    // 重置指数表单
+    resetForm() {
+      this.newIndexData = {
+        name: '',
+        code: '',
+        currentIndexPoint: 0,
+        supportLevel: 0,
+        twoYearLow: 0,
+        previousHigh: 0,
+        extremeValue: '',
+        valueRangeLower: '',
+        valueRangeUpper: '',
+        normalRangeLower: '',
+        normalRangeUpper: '',
+        pressureLevel: 0,
+        cheeseUrl: '',
+        reboundHigh: 0
+      };
+    },
+
+    // 计算距离支撑位的百分比
+    calculateDistanceToSupport() {
+      // 简单计算距离支撑位的百分比
+      return this.newIndexData.supportLevel ? '0%' : 'N/A';
+    },
+
+    // 一键打开目标网站
+    fetchData() {
+      this.targetUrls.forEach(url => {
+        window.open(url, '_blank');
+      });
+    },
+
+    // 跳转到芝士数据页面
+    onCheeseDataClick(item) {
+      // 这里可以自定义跳转或弹窗等逻辑
+      const url = item.cheeseUrl && item.cheeseUrl.trim() ? item.cheeseUrl : 'https://stock.cheesefortune.com/';
+      window.open(url, '_blank');
+    },
+
+    // 导出所有本地存储数据为JSON文件
+    exportData() {
+      // 读取所有本地存储数据
+      chrome.storage.local.get(null, (result) => {
+        const dataStr = JSON.stringify(result, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "chrome_plugin_data.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+    },
+
+    // 触发导入文件选择
+    triggerImport() {
+      this.$refs.importFile.click();
+    },
+
+    // 导入本地JSON数据并写入storage
+    importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = JSON.parse(e.target.result);
+          chrome.storage.local.set(data, () => {
+            alert("数据导入成功！");
+            location.reload(); // 可选：刷新页面以加载新数据
+          });
+        } catch (err) {
+          alert("导入失败，文件格式不正确！");
+        }
+      };
+      reader.readAsText(file);
+    },
+
+    // 新增持仓，保存到本地storage
+    savePosition() {
+      // 校验必填项
+      if (!this.newPosition.code || !this.newPosition.name) {
+        alert('股票代码和名称为必填项');
+        return;
+      }
+      if (this.isEditingPosition) {
+        // 编辑模式，更新对应项
+        this.positions.splice(this.currentEditPositionIndex, 1, { ...this.newPosition });
+        this.isEditingPosition = false;
+        this.currentEditPositionIndex = -1;
+      } else {
+        // 新增模式
+        this.positions.push({ ...this.newPosition });
+      }
+      // 保存到本地
+      chrome.storage.local.set({ positions: this.positions }, () => {
+        console.log('持仓数据已保存');
+      });
+      // 重置表单并关闭弹窗
+      this.showAddPositionModal = false;
+      this.newPosition = {
+        category: '',
+        subCategory: '', // 新增：二级分类
+        code: '',
+        name: '',
+        amount: 0,
+        price: 0
+      };
+      this.originalPositions = this.positions.slice(); // 新增：保存原始顺序
+    },
+
+    // 删除某条持仓
+    deletePosition(idx) {
+      this.positions.splice(idx, 1);
+      chrome.storage.local.set({ positions: this.positions }, () => {
+        console.log('持仓已删除');
+      });
+      this.originalPositions = this.positions.slice(); // 新增：保存原始顺序
+    },
+
+    // 编辑持仓，弹出编辑模态框并填充数据
+    editPosition(idx) {
+      const item = this.positions[idx];
+      this.newPosition = { ...item };
+      this.showAddPositionModal = true;
+      this.isEditingPosition = true;
+      this.currentEditPositionIndex = idx;
+    },
+
+    // 更新行情（持仓和指数）
+    async updateMarket() {
+      try {
+        // 1. 获取所有股票和指数的代码
+        const stockCodes = this.positions.map(stock => stock.code.trim());
+        const indexCodes = this.indexData.map(idx => idx.code.trim());
+        // 合并去重
+        const allCodes = Array.from(new Set([...stockCodes, ...indexCodes])).filter(Boolean);
+        console.log('allCodes:', allCodes);
+        if (allCodes.length === 0) {
+          alert('没有有效的股票或指数代码可供查询。');
+          return;
+        }
+
+        // 2. 请求行情（腾讯接口，A股需加前缀如 sh000001、sz000001）
+        // 你可以根据实际情况调整前缀
+        const querySymbols = allCodes.join(',');
+        const response = await fetch(`https://qt.gtimg.cn/q=${querySymbols}`);
+        const text = await response.text();
+
+        // 3. 解析返回数据
+        const individualStockData = text.trim().split(';').filter(s => s.length > 0);
+        individualStockData.forEach(stockStr => {
+          const fields = stockStr.split('~');
+          if (fields.length > 3) {
+            const currentPriceStr = fields[3];
+            const currentPrice = parseFloat(currentPriceStr);
+            const code = fields[2]; // 股票代码在第三个字段
+
+            // 4. 更新持仓股票
+            const stock = this.positions.find(s => s.code.includes(code));
+            if (stock && !isNaN(currentPrice)) {
+              stock.currentPrice = currentPrice;
+              stock.value = stock.amount * currentPrice;
+            }
+
+            // 5. 更新指数点位
+            const idx = this.indexData.find(i => i.code.includes(code));
+            if (idx && !isNaN(currentPrice)) {
+              idx.currentIndexPoint = currentPrice;
+              // 获取市盈率
+              const peField = fields[39]; // 腾讯接口的市盈率字段
+              if (peField && peField !== '-') {
+                idx.currentPE = parseFloat(peField);
+              } else {
+                idx.currentPE = null;
+              }
+            }
+          }
+        });
+
+        // 6. 保存到本地
+        chrome.storage.local.set({ positions: this.positions, indexData: this.indexData }, () => {
+          alert('股票和指数数据更新完成！');
+        });
+      } catch (error) {
+        console.error('获取股票数据失败:', error);
+        alert('获取股票数据失败，请稍后重试！');
+      }
+    },
+
+    // 判断现指数点位区间并返回对应颜色
+    getIndexColor(item) {
+      const v = Number(item.currentIndexPoint);
+      const extreme = Number(item.extremeValue);
+      const valueLow = Number(item.valueRangeLower);
+      const valueHigh = Number(item.valueRangeUpper);
+      const normalLow = Number(item.normalRangeLower);
+      const normalHigh = Number(item.normalRangeUpper);
+      const pressure = Number(item.pressureLevel);
+      if (!v || isNaN(v)) return '';
+      if (!isNaN(extreme) && v <= extreme) return '#006400'; // 极度价值
+      if (!isNaN(valueLow) && !isNaN(valueHigh) && v > extreme && v <= valueHigh) return '#90ee90'; // 价值区间
+      if (!isNaN(normalLow) && !isNaN(normalHigh) && v > valueHigh && v <= normalHigh) return '#ffe066'; // 正常区间
+      if (!isNaN(pressure) && v > normalHigh && v <= pressure) return '#ffa940'; // 接近压力位
+      if (!isNaN(pressure) && v > pressure) return '#ff4d4f'; // 超过压力位
+      return '';
+    },
+
+    // 计算百分位
+    getPercentile(currentPE, peArr) {
+      if (!Array.isArray(peArr) || peArr.length === 0) return '--';
+      const sorted = peArr.slice().sort((a, b) => a - b);
+      let count = 0;
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i] < currentPE) count++;
+      }
+      return ((count / sorted.length) * 100).toFixed(0);
+    },
+    getLatestPe(peKey) {
+      const result = this.getLatestPeWithDate(peKey);
+      return result.pe;
+    },
+    getLatestPeWithDate(peKey) {
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return { pe: '--', date: '' };
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return { pe: '--', date: '' };
+      // 找到日期最新的那一项
+      let latest = arr[0];
+      for (let i = 1; i < arr.length; i++) {
+        if (arr[i].date > latest.date) {
+          latest = arr[i];
+        }
+      }
+      return {
+        pe: latest && latest.pe ? parseFloat(latest.pe) : '--',
+        date: latest && latest.date ? latest.date : ''
+      };
+    },
+    // 计算五年平均值
+    getFiveYearAverage(peKey) {
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return '--';
+      
+      // 计算五年前的日期
+      const now = new Date();
+      const fiveYearsAgo = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
+      
+      // 过滤出五年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= fiveYearsAgo;
+      });
+      
+      if (recentData.length === 0) return '--';
+      
+      // 计算平均值
+      const sum = recentData.reduce((acc, item) => {
+        const pe = parseFloat(item.pe);
+        return !isNaN(pe) ? acc + pe : acc;
+      }, 0);
+      
+      const average = sum / recentData.length;
+
+      return average.toFixed(2);
+    },
+    // 计算五年百分位
+    getFiveYearPercentile(currentPE, peKey) {
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return '--';
+      
+      // 计算五年前的日期
+      const now = new Date();
+      const fiveYearsAgo = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
+      
+      // 过滤出五年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= fiveYearsAgo;
+      });
+      
+      if (recentData.length === 0) return '--';
+      
+      // 提取有效的PE值
+      const peValues = recentData.map(item => parseFloat(item.pe)).filter(pe => !isNaN(pe));
+      if (peValues.length === 0) return '--';
+      
+      // 计算当前PE在历史数据中的百分位
+      let currentPEValue = parseFloat(currentPE);
+      if (isNaN(currentPEValue)) currentPEValue = 0;
+      
+      // 获取zs市盈率
+      const zsPE = this.getLatestPe(peKey);
+      
+      // 检查是否需要使用zs市盈率代替TX市盈率
+      // 条件1: TX市盈率为0
+      // 条件2: TX市盈率与zs市盈率差距在10%以上
+      if (currentPEValue === 0 || (zsPE !== '--' && Math.abs((currentPEValue - parseFloat(zsPE)) / parseFloat(zsPE)) * 100 > 10)) {
+        currentPEValue = parseFloat(zsPE);
+      }
+      
+      // 如果无法获取有效的PE值，返回'--'
+      if (isNaN(currentPEValue) || currentPEValue === 0) return '--';
+      
+      // 统计小于当前PE值的数量
+      let count = 0;
+      for (let i = 0; i < peValues.length; i++) {
+        if (peValues[i] < currentPEValue) count++;
+      }
+      
+      // 计算百分位
+      const percentile = (count / peValues.length) * 100;
+      return percentile.toFixed(0);
+    },
+    // 计算十年平均值
+    getTenYearAverage(peKey) {
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return '--';
+      
+      // 计算十年前的日期
+      const now = new Date();
+      const tenYearsAgo = new Date(now.getFullYear() - 10, now.getMonth(), now.getDate());
+      
+      // 过滤出十年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= tenYearsAgo;
+      });
+      
+      if (recentData.length === 0) return '--';
+      
+      // 计算平均值
+      const sum = recentData.reduce((acc, item) => {
+        const pe = parseFloat(item.pe);
+        return !isNaN(pe) ? acc + pe : acc;
+      }, 0);
+      
+      const average = sum / recentData.length;
+      
+      return average.toFixed(2);
+    },
+    codeToPeKey(code) {
+      if (!code) return '';
+      // 特殊处理 sh000990 和 000990.CSI 的对应关系
+      if (code === 'sh000990') {
+        return '000990.CSI';
+      }
+      if (code.startsWith('sh')) return code.slice(2).toUpperCase() + '.SH';
+      if (code.startsWith('sz')) return code.slice(2).toUpperCase() + '.SZ';
+      if (code.startsWith('hk')) {
+        // 特殊处理恒生指数代码
+        if (code === 'hkHSI') {
+          return 'HSI.HI';
+        }
+        return code.slice(2).toUpperCase() + '.HK';
+      }
+      return code.toUpperCase();
+    },
+    togglePositionSort() {
+      this.positionSortByRatio = !this.positionSortByRatio;
+      // 保存到本地
+      chrome.storage.local.set({ positionSortByRatio: this.positionSortByRatio });
+      if (this.positionSortByRatio) {
+        // 按持仓比例从大到小排序
+        this.positions.sort((a, b) => {
+          const aValue = a.amount * (a.category === '现金' ? 1 : (a.currentPrice || 0));
+          const bValue = b.amount * (b.category === '现金' ? 1 : (b.currentPrice || 0));
+          return bValue - aValue;
+        });
+      } else {
+        // 恢复原始顺序
+        this.positions = this.originalPositions.slice();
+      }
+    },
+    // 提示框相关方法
+    showTooltip(event, text) {
+      if (!text) return;
+      this.tooltip.show = true;
+      this.tooltip.text = text;
+      // 设置提示框位置
+      this.tooltip.x = event.clientX;
+      this.tooltip.y = event.clientY + 20; // 在鼠标下方20px
+    },
+    hideTooltip() {
+      this.tooltip.show = false;
+    },
+    // 添加温度-仓位对照表行
+    addTemperaturePositionRow() {
+      this.temperaturePositionTable.push({
+        temperature: 0,
+        position: 0
+      });
+    },
+    // 删除温度-仓位对照表行
+    deleteTemperaturePositionRow(index) {
+      if (this.temperaturePositionTable.length > 1) {
+        this.temperaturePositionTable.splice(index, 1);
+      } else {
+        alert('至少需要保留一行数据');
+      }
+    },
+    // 保存温度-仓位对照表
+    saveTemperaturePositionTable() {
+      // 对表格按温度排序
+      this.temperaturePositionTable.sort((a, b) => a.temperature - b.temperature);
+      
+      // 在保存前打印数据，以便检查格式
+      console.log('准备保存温度-仓位对照表:', this.temperaturePositionTable);
+      console.log('数据类型检查:');
+      this.temperaturePositionTable.forEach((item, index) => {
+        console.log(`  [${index}] temperature: ${typeof item.temperature} (${item.temperature}), position: ${typeof item.position} (${item.position})`);
+      });
+      
+      // 保存到本地存储
+      chrome.storage.local.set({ 'temperaturePositionTable': this.temperaturePositionTable }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('保存温度-仓位对照表失败:', chrome.runtime.lastError);
+          alert('温度-仓位对照表保存失败: ' + chrome.runtime.lastError.message);
+        } else {
+          console.log('温度-仓位对照表已保存:', this.temperaturePositionTable);
+          // 添加用户可见的成功提示
+          alert('温度-仓位对照表保存成功!');
+        }
+      });
+      
+      // 关闭模态框
+      this.showTemperaturePositionModal = false;
+      
+      // 更新图表
+      this.$nextTick(() => {
+        this.updateTemperaturePositionChart();
+      });
+    },
+    // 根据温度-仓位对照表进行线性插值计算
+    calculatePositionFromTable(temperature) {
+      // 确保表格按温度排序
+      const sortedTable = [...this.temperaturePositionTable].sort((a, b) => a.temperature - b.temperature);
+      
+      // 如果温度小于等于最小温度，返回最大仓位
+      if (temperature <= sortedTable[0].temperature) {
+        return sortedTable[0].position;
+      }
+      
+      // 如果温度大于等于最大温度，返回最小仓位
+      if (temperature >= sortedTable[sortedTable.length - 1].temperature) {
+        return sortedTable[sortedTable.length - 1].position;
+      }
+      
+      // 找到温度所在的区间
+      for (let i = 0; i < sortedTable.length - 1; i++) {
+        if (temperature >= sortedTable[i].temperature && temperature <= sortedTable[i + 1].temperature) {
+          // 线性插值计算
+          const temp1 = sortedTable[i].temperature;
+          const temp2 = sortedTable[i + 1].temperature;
+          const pos1 = sortedTable[i].position;
+          const pos2 = sortedTable[i + 1].position;
+          
+          // 计算插值
+          const position = pos1 + (pos2 - pos1) * (temperature - temp1) / (temp2 - temp1);
+          return position;
+        }
+      }
+      
+      // 如果没有找到合适的区间，返回默认值
+      return 50;
+    },
+    // 初始化温度-仓位对照表图表
+    initTemperaturePositionChart() {
+      const ctx = document.getElementById('temperaturePositionChart');
+      if (!ctx) return;
+      
+      // 按温度排序数据
+      const sortedData = [...this.temperaturePositionTable].sort((a, b) => a.temperature - b.temperature);
+      const temperatures = sortedData.map(item => item.temperature);
+      const positions = sortedData.map(item => item.position);
+      
+      // 销毁之前的图表实例（如果存在）
+      if (temperaturePositionChart) {
+        temperaturePositionChart.destroy();
+      }
+      
+      // 创建新的图表实例
+      temperaturePositionChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: temperatures,
+          datasets: [{
+            label: '仓位 (%)',
+            data: positions,
+            borderColor: '#42b983',
+            backgroundColor: 'rgba(66, 185, 131, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: '温度'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: '仓位 (%)'
+              },
+              min: 0,
+              max: 100
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+    },
+    // 更新温度-仓位对照表图表
+    updateTemperaturePositionChart() {
+      if (!temperaturePositionChart) return;
+      
+      // 按温度排序数据
+      const sortedData = [...this.temperaturePositionTable].sort((a, b) => a.temperature - b.temperature);
+      const temperatures = sortedData.map(item => item.temperature);
+      const positions = sortedData.map(item => item.position);
+      
+      // 更新图表数据
+      temperaturePositionChart.data.labels = temperatures;
+      temperaturePositionChart.data.datasets[0].data = positions;
+      temperaturePositionChart.update();
+    },
+    // 打开建议仓位逻辑模态框
+    openPositionLogicModal() {
+      // 先设置模态框显示
+      this.showPositionLogicModal = true;
+      
+      // 在下一个事件循环中初始化图表，确保DOM已更新
+      this.$nextTick(() => {
+        // 如果Chart.js已经加载，则初始化图表
+        if (typeof Chart !== 'undefined') {
+          this.initTemperaturePositionChart();
+        } else {
+          // 如果Chart.js还未加载，则等待其加载完成
+          const checkChart = setInterval(() => {
+            if (typeof Chart !== 'undefined') {
+              this.initTemperaturePositionChart();
+              clearInterval(checkChart);
+            }
+          }, 100);
+          
+          // 设置超时时间，避免无限等待
+          setTimeout(() => {
+            clearInterval(checkChart);
+          }, 5000);
+        }
+      });
+    },
+    // 关闭建议仓位逻辑模态框
+    closePositionLogicModal() {
+      this.showPositionLogicModal = false;
+    },
+
+    // 一键zs数据按钮功能（暂空）
+    fetchZsData() {
+      // 遍历所有指数数据，打开芝士链接
+      this.indexData.forEach(item => {
+        if (item.cheeseUrl && item.cheeseUrl.trim()) {
+          window.open(item.cheeseUrl, '_blank');
+        }
+      });
+    },
+    // 判断TX市盈率与zs市盈率差值是否超过2%
+    isPERatioExceeded(txPE, zsPE) {
+      // 确保两个值都存在且为有效数字
+      if (!txPE || !zsPE || isNaN(txPE) || isNaN(zsPE) || zsPE === 0) {
+        return false;
+      }
+      // 计算差值百分比
+      const ratio = Math.abs((txPE - zsPE) / zsPE) * 100;
+      return ratio > 2;
+    },
+    // 显示十年平均值计算详情模态框
+    showTenYearAverageModal(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return;
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return;
+      
+      // 计算十年前的日期
+      const now = new Date();
+      const tenYearsAgo = new Date(now.getFullYear() - 10, now.getMonth(), now.getDate());
+      
+      // 过滤出十年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= tenYearsAgo;
+      });
+      
+      if (recentData.length === 0) return;
+      
+      // 计算平均值
+      const sum = recentData.reduce((acc, item) => {
+        const pe = parseFloat(item.pe);
+        return !isNaN(pe) ? acc + pe : acc;
+      }, 0);
+      
+      const average = sum / recentData.length;
+      
+      // 获取数据样本（随机10条，然后按日期排序）
+      const shuffledData = [...recentData].sort(() => 0.5 - Math.random()).slice(0, 10);
+      const dataSample = shuffledData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // 设置模态框数据
+      this.tenYearAverageModal = {
+        show: true,
+        code: item.code,
+        name: item.name,
+        tenYearAverage: average.toFixed(2),
+        calculationDetails: {
+          startDate: tenYearsAgo.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0],
+          dataCount: recentData.length,
+          sum: sum,
+          average: average,
+          dataSample: dataSample.map(item => ({
+            date: item.date,
+            pe: parseFloat(item.pe).toFixed(2)
+          }))
+        }
+      };
+    },
+    // 显示五年平均值计算详情模态框
+    showFiveYearAverageModal(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return;
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return;
+      
+      // 计算五年前的日期
+      const now = new Date();
+      const fiveYearsAgo = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
+      
+      // 过滤出五年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= fiveYearsAgo;
+      });
+      
+      if (recentData.length === 0) return;
+      
+      // 计算平均值
+      const sum = recentData.reduce((acc, item) => {
+        const pe = parseFloat(item.pe);
+        return !isNaN(pe) ? acc + pe : acc;
+      }, 0);
+      
+      const average = sum / recentData.length;
+      
+      // 获取数据样本（随机10条，然后按日期排序）
+      const shuffledData = [...recentData].sort(() => 0.5 - Math.random()).slice(0, 10);
+      const dataSample = shuffledData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // 设置模态框数据
+      this.fiveYearAverageModal = {
+        show: true,
+        code: item.code,
+        name: item.name,
+        fiveYearAverage: average.toFixed(2),
+        calculationDetails: {
+          startDate: fiveYearsAgo.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0],
+          dataCount: recentData.length,
+          sum: sum,
+          average: average,
+          dataSample: dataSample.map(item => ({
+            date: item.date,
+            pe: parseFloat(item.pe).toFixed(2)
+          }))
+        }
+      };
+    },
+    // 显示五年百分位计算详情模态框
+    showFiveYearPercentileModal(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return;
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return;
+      
+      // 计算五年前的日期
+      const now = new Date();
+      const fiveYearsAgo = new Date(now.getFullYear() - 5, now.getMonth(), now.getDate());
+      
+      // 过滤出五年内的数据
+      const recentData = arr.filter(item => {
+        if (!item.date) return false;
+        const itemDate = new Date(item.date);
+        return itemDate >= fiveYearsAgo;
+      });
+      
+      if (recentData.length === 0) return;
+      
+      // 提取有效的PE值
+      const peValues = recentData.map(item => parseFloat(item.pe)).filter(pe => !isNaN(pe));
+      if (peValues.length === 0) return;
+      
+      // 计算当前PE值在历史数据中的百分位
+      let currentPEValue = parseFloat(item.currentPE);
+      if (isNaN(currentPEValue)) return;
+      
+      // 获取zs市盈率
+      const zsPE = this.getLatestPe(peKey);
+      let usedZsPE = false;
+      
+      // 检查是否需要使用zs市盈率代替TX市盈率
+      // 条件1: TX市盈率为0
+      // 条件2: TX市盈率与zs市盈率差距在10%以上
+      if (currentPEValue === 0 || (zsPE !== '--' && Math.abs((currentPEValue - parseFloat(zsPE)) / parseFloat(zsPE)) * 100 > 10)) {
+        currentPEValue = parseFloat(zsPE);
+        usedZsPE = true;
+      }
+      
+      // 统计小于当前PE值的数量
+      let lowerCount = 0;
+      for (let i = 0; i < peValues.length; i++) {
+        if (peValues[i] < currentPEValue) lowerCount++;
+      }
+      
+      // 计算百分位
+      const percentile = (lowerCount / peValues.length) * 100;
+      
+      // 计算不同百分位的PE值
+      const sortedPeValues = [...peValues].sort((a, b) => a - b);
+      const percentileValues = {
+        '0': sortedPeValues[0].toFixed(2), // 最小值
+        '10': this.getPercentileValue(sortedPeValues, 10).toFixed(2),
+        '25': this.getPercentileValue(sortedPeValues, 25).toFixed(2),
+        '50': this.getPercentileValue(sortedPeValues, 50).toFixed(2), // 中位数
+        '75': this.getPercentileValue(sortedPeValues, 75).toFixed(2),
+        '90': this.getPercentileValue(sortedPeValues, 90).toFixed(2),
+        '100': sortedPeValues[sortedPeValues.length - 1].toFixed(2) // 最大值
+      };
+      
+      // 获取数据样本（随机10条，然后按日期排序）
+      const shuffledData = [...recentData].sort(() => 0.5 - Math.random()).slice(0, 10);
+      const dataSample = shuffledData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // 设置模态框数据
+      this.fiveYearPercentileModal = {
+        show: true,
+        code: item.code,
+        name: item.name,
+        currentPE: currentPEValue.toFixed(2),
+        originalPE: item.currentPE,
+        zsPE: zsPE,
+        usedZsPE: usedZsPE,
+        percentile: percentile.toFixed(0),
+        calculationDetails: {
+          startDate: fiveYearsAgo.toISOString().split('T')[0],
+          endDate: now.toISOString().split('T')[0],
+          dataCount: peValues.length,
+          lowerCount: lowerCount,
+          percentileValues: percentileValues,
+          dataSample: dataSample.map(item => ({
+            date: item.date,
+            pe: parseFloat(item.pe).toFixed(2)
+          }))
+        }
+      };
+    },
+    // 显示历史百分位计算详情模态框
+    showHistoryPercentileModal(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return;
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return;
+      
+      // 提取有效的PE值
+      const peValues = arr.map(item => parseFloat(item.pe)).filter(pe => !isNaN(pe));
+      if (peValues.length === 0) return;
+      
+      // 计算当前PE值在历史数据中的百分位
+      let currentPEValue = parseFloat(item.currentPE);
+      if (isNaN(currentPEValue)) return;
+      
+      // 获取zs市盈率
+      const zsPE = this.getLatestPe(peKey);
+      let usedZsPE = false;
+      
+      // 检查是否需要使用zs市盈率代替TX市盈率
+      // 条件1: TX市盈率为0
+      // 条件2: TX市盈率与zs市盈率差距在10%以上
+      if (currentPEValue === 0 || (zsPE !== '--' && Math.abs((currentPEValue - parseFloat(zsPE)) / parseFloat(zsPE)) * 100 > 10)) {
+        currentPEValue = parseFloat(zsPE);
+        usedZsPE = true;
+      }
+      
+      // 统计小于当前PE值的数量
+      let lowerCount = 0;
+      for (let i = 0; i < peValues.length; i++) {
+        if (peValues[i] < currentPEValue) lowerCount++;
+      }
+      
+      // 计算百分位
+      const percentile = (lowerCount / peValues.length) * 100;
+      
+      // 计算不同百分位的PE值
+      const sortedPeValues = [...peValues].sort((a, b) => a - b);
+      const percentileValues = {
+        '0': sortedPeValues[0].toFixed(2), // 最小值
+        '10': this.getPercentileValue(sortedPeValues, 10).toFixed(2),
+        '25': this.getPercentileValue(sortedPeValues, 25).toFixed(2),
+        '50': this.getPercentileValue(sortedPeValues, 50).toFixed(2), // 中位数
+        '75': this.getPercentileValue(sortedPeValues, 75).toFixed(2),
+        '90': this.getPercentileValue(sortedPeValues, 90).toFixed(2),
+        '100': sortedPeValues[sortedPeValues.length - 1].toFixed(2) // 最大值
+      };
+      
+      // 获取数据样本（随机10条，然后按日期排序）
+      const shuffledData = [...arr].sort(() => 0.5 - Math.random()).slice(0, 10);
+      const dataSample = shuffledData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // 获取日期范围
+      const dates = arr.map(item => new Date(item.date)).filter(date => !isNaN(date));
+      const startDate = new Date(Math.min(...dates));
+      const endDate = new Date(Math.max(...dates));
+      
+      // 设置模态框数据
+      this.historyPercentileModal = {
+        show: true,
+        code: item.code,
+        name: item.name,
+        currentPE: currentPEValue.toFixed(2),
+        originalPE: item.currentPE,
+        zsPE: zsPE,
+        usedZsPE: usedZsPE,
+        percentile: percentile.toFixed(0),
+        calculationDetails: {
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0],
+          dataCount: peValues.length,
+          lowerCount: lowerCount,
+          percentileValues: percentileValues,
+          dataSample: dataSample.map(item => ({
+            date: item.date,
+            pe: parseFloat(item.pe).toFixed(2)
+          }))
+        }
+      };
+    },
+    // 计算指定百分位的PE值
+    getPercentileValue(sortedArray, percentile) {
+      if (sortedArray.length === 0) return 0;
+      
+      const index = (percentile / 100) * (sortedArray.length - 1);
+      const lowerIndex = Math.floor(index);
+      const upperIndex = Math.ceil(index);
+      
+      if (lowerIndex === upperIndex) {
+        return sortedArray[lowerIndex];
+      }
+      
+      // 线性插值
+      const weight = index - lowerIndex;
+      return sortedArray[lowerIndex] * (1 - weight) + sortedArray[upperIndex] * weight;
+    },
+    // 计算历史百分位用于主页显示（与详情页面逻辑一致）
+    getHistoryPercentileForDisplay(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '--';
+      
+      const arr = this.rawPeData[peKey];
+      if (arr.length === 0) return '--';
+      
+      // 提取有效的PE值
+      const peValues = arr.map(item => parseFloat(item.pe)).filter(pe => !isNaN(pe));
+      if (peValues.length === 0) return '--';
+      
+      // 计算当前PE值在历史数据中的百分位
+      let currentPEValue = parseFloat(item.currentPE);
+      if (isNaN(currentPEValue)) return '--';
+      
+      // 获取zs市盈率
+      const zsPE = this.getLatestPe(peKey);
+      
+      // 检查是否需要使用zs市盈率代替TX市盈率
+      // 条件1: TX市盈率为0
+      // 条件2: TX市盈率与zs市盈率差距在10%以上
+      if (currentPEValue === 0 || (zsPE !== '--' && Math.abs((currentPEValue - parseFloat(zsPE)) / parseFloat(zsPE)) * 100 > 10)) {
+        currentPEValue = parseFloat(zsPE);
+      }
+      
+      // 如果无法获取有效的PE值，返回'--'
+      if (isNaN(currentPEValue) || currentPEValue === 0) return '--';
+      
+      // 统计小于当前PE值的数量
+      let count = 0;
+      for (let i = 0; i < peValues.length; i++) {
+        if (peValues[i] < currentPEValue) count++;
+      }
+      
+      // 计算百分位
+      const percentile = (count / peValues.length) * 100;
+      return percentile.toFixed(0);
+    },
+    // 获取五年百分位的颜色
+    getFiveYearPercentileColor(item) {
+      const peKey = this.codeToPeKey(item.code);
+      if (!this.rawPeData || !this.rawPeData[peKey] || !Array.isArray(this.rawPeData[peKey])) return '';
+      
+      const percentileValue = this.getFiveYearPercentile(item.currentPE, peKey);
+      if (percentileValue === '--') return '';
+      
+      const percentile = parseFloat(percentileValue);
+      if (isNaN(percentile)) return '';
+      
+      if (percentile < 25) return '#90ee90'; // 绿色
+      if (percentile > 75) return '#ff4d4f'; // 红色
+      return '';
+    },
+    // 获取历史百分位的颜色
+    getHistoryPercentileColor(item) {
+      const percentileValue = this.getHistoryPercentileForDisplay(item);
+      if (percentileValue === '--') return '';
+      
+      const percentile = parseFloat(percentileValue);
+      if (isNaN(percentile)) return '';
+      
+      if (percentile < 25) return '#90ee90'; // 绿色
+      if (percentile > 75) return '#ff4d4f'; // 红色
+      return '';
+    }
+  },
+  mounted() {
+    chrome.storage.local.get([
+      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable'
+    ], (result) => {
+      console.log('读取到的indexData:', result.indexData);
+      console.log('读取到的pe_values:', result.all_pe_data);
+      let arr = [];
+      if (Array.isArray(result.indexData)) {
+        arr = result.indexData;
+      } else if (typeof result.indexData === 'object' && result.indexData !== null) {
+        // 可能是 {0: {...}, 1: {...}} 这种对象
+        arr = Object.values(result.indexData);
+      }
+      this.indexData = arr.map(item => {
+        // 迁移旧数据中的viewPoint到currentIndexPoint
+        if (item.viewPoint !== undefined) {
+          return { ...item, currentIndexPoint: item.viewPoint, viewPoint: undefined };
+        }
+        return item;
+      });
+      this.temperatureData[1].temperature = result['haomai_today-temp'] ? `${result['haomai_today-temp']}` : 'N/A';
+      if (result.todayTemp) {
+        this.todayTempValue = parseFloat(result.todayTemp);
+        this.temperatureData[0].temperature = `${result.todayTemp}`;
+        if (result.dateDegreeDB) {
+          const todayTempValue = parseFloat(result.todayTemp);
+          const degreeValues = result.dateDegreeDB.map(item => parseFloat(item.degree));
+          const lowerCount = degreeValues.filter(degree => degree < todayTempValue).length;
+          const percentile = ((lowerCount / degreeValues.length) * 100).toFixed(0);
+          this.temperatureData[0].yield = `${percentile}%`;
+        }
+      }
+      if (result.dateDegreeDB) {
+        // 对 dateDegreeDB 按日期排序
+        const sortedData = [...result.dateDegreeDB].sort((a, b) => {
+          return new Date(a.date.replace(/\./g, '-')) - new Date(b.date.replace(/\./g, '-'));
+        });
+        const dates = ['2015-6-12', '2019-1-2', '2021-2-19', '2022-4-26', '2022-10-31', '2024-2-5', '2024-9-13'];
+        dates.forEach((date) => {
+          const targetDate = new Date(date);
+          const targetYear = targetDate.getFullYear();
+          const targetMonth = targetDate.getMonth();
+          const targetDay = targetDate.getDate();
+          const record = sortedData.find(item => {
+            const match = item.date.match(/(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+            if (!match) return false;
+            const year = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10) - 1; // 转换为0-11
+            const day = parseInt(match[3], 10);
+            return year === targetYear && month === targetMonth && day === targetDay;
+          });
+          if (record) {
+            this.temperatureData[0][date] = `${record.degree}`;
+            this.temperatureData[0][`${date}_isNext`] = false;
+          } else {
+            const targetDate = new Date(date.replace(/\./g, '-'));
+            const nextRecord = sortedData.find(item => {
+              return new Date(item.date.replace(/\./g, '-')) > targetDate;
+            });
+            if (nextRecord) {
+              this.temperatureData[0][date] = `${nextRecord.degree}`;
+              this.temperatureData[0][`${date}_isNext`] = true;
+            }
+          }
+        });
+        // 检查是否需要高亮2019-1-2的单元格
+        const targetDate2019 = '2019-1-2';
+        const targetTemp2019 = parseFloat(this.temperatureData[0][targetDate2019]) || 0;
+        this.shouldHighlight2019 = this.todayTempValue <= targetTemp2019;
+
+        // 检查是否需要高亮2024-2-5的单元格
+        const targetDate2024 = '2024-2-5';
+        const targetTemp2024 = parseFloat(this.temperatureData[0][targetDate2024]) || 0;
+        this.shouldHighlight2024 = this.todayTempValue <= targetTemp2024;
+      }
+      if (result.haomai_date) {
+        this.haomaiDate = result.haomai_date;
+      }
+      if (Array.isArray(result.positions)) {
+        this.positions = result.positions;
+      } else if (typeof result.positions === 'object' && result.positions !== null) {
+        this.positions = Object.values(result.positions);
+      } else {
+        this.positions = [];
+      }
+      // 处理pe历史数据
+      if (result.all_pe_data && typeof result.all_pe_data === 'object') {
+        this.peValuesMap = {};
+        Object.keys(result.all_pe_data).forEach(code => {
+          this.peValuesMap[code] = result.all_pe_data[code].map(item => parseFloat(item.pe)).filter(v => !isNaN(v));
+        });
+      }
+      // 保留原始pe数据
+      if (result.all_pe_data && typeof result.all_pe_data === 'object') {
+        this.rawPeData = result.all_pe_data;
+      }
+      console.log('storage.positions:', this.positions);
+      // 保存原始顺序
+      this.originalPositions = this.positions.slice();
+
+      // 恢复排序状态
+      if (result.positionSortByRatio) {
+        this.positionSortByRatio = true;
+        // 只排序，不反转
+        this.positions.sort((a, b) => {
+          const aValue = a.amount * (a.category === '现金' ? 1 : (a.currentPrice || 0));
+          const bValue = b.amount * (b.category === '现金' ? 1 : (b.currentPrice || 0));
+          return bValue - aValue;
+        });
+      } else {
+        this.positionSortByRatio = false;
+        this.positions = this.originalPositions.slice();
+      }
+      
+      // 加载温度-仓位对照表数据
+      console.log('尝试加载温度-仓位对照表:', result.temperaturePositionTable);
+      let loadedTable = result.temperaturePositionTable;
+      
+      // 如果loadedTable是一个类数组对象（例如 {0: {...}, 1: {...}}），则转换为数组
+      if (loadedTable && typeof loadedTable === 'object' && !Array.isArray(loadedTable)) {
+        // 检查是否所有键都是数字字符串或数字, 且从0开始连续
+        const keys = Object.keys(loadedTable).map(Number).sort((a, b) => a - b);
+        const isSequential = keys.length > 0 && keys[0] === 0 && keys.every((key, index) => key === index);
+        
+        if (isSequential) {
+          loadedTable = Array.from({length: keys.length}, (_, i) => loadedTable[i]);
+          console.log('已将类数组对象转换为数组:', loadedTable);
+        } else {
+          // 如果键不连续，则直接使用Object.values
+          loadedTable = Object.values(loadedTable);
+          console.log('已将对象的值转换为数组:', loadedTable);
+        }
+      }
+      
+      if (loadedTable && Array.isArray(loadedTable) && loadedTable.length > 0) {
+        // 验证数组中的每个元素是否具有 temperature 和 position 属性
+        const isValidFormat = loadedTable.every(item =>
+          typeof item === 'object' &&
+          item !== null &&
+          typeof item.temperature === 'number' &&
+          typeof item.position === 'number'
+        );
+        
+        if (isValidFormat) {
+          this.temperaturePositionTable = loadedTable;
+          console.log('成功加载温度-仓位对照表:', this.temperaturePositionTable);
+        } else {
+          console.warn('存储中的温度-仓位对照表数据格式不正确，使用默认值');
+        }
+      } else {
+        console.log('存储中没有有效的温度-仓位对照表数据，使用默认值');
+      }
+      
+      // 标记温度-仓位对照表数据已加载
+      this.isTemperaturePositionTableLoaded = true;
+      
+      // 初始化图表（如果Chart.js已经加载）
+      if (typeof Chart !== 'undefined') {
+        this.$nextTick(() => {
+          this.initTemperaturePositionChart();
+        });
+      }
+    });
+    this.$watch(
+      () => this.positions.map(item => item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))),
+      (values) => {
+        this.totalPositionValue = values.reduce((sum, v) => sum + v, 0);
+      },
+      { immediate: true, deep: true }
+    );
+    
+    // 页面加载完成后自动更新行情
+    // 延迟2秒执行，确保数据加载完成
+    setTimeout(() => {
+      this.updateMarket();
+    }, 2000);
+    
+    // 引入并初始化 Chart.js
+    const script = document.createElement('script');
+    script.src = '/js/chart.js';
+    script.onload = () => {
+      // Chart.js 已加载，可以在这里初始化图表
+      console.log('Chart.js loaded');
+      this.initTemperaturePositionChart();
+    };
+    document.head.appendChild(script);
+  },
+  computed: {
+    suggestedPositionAH() {
+      try {
+        // 检查数据是否已加载
+        if (!this.temperatureData || this.temperatureData.length < 2) {
+          console.log('温度数据尚未加载');
+          return 'N/A';
+        }
+        
+        // 获取有知有行数据和好买温度
+        const youzhiyouxingData = this.temperatureData[0]; // 有知有行数据
+        const haomaiData = this.temperatureData[1]; // 好买温度
+        
+        // 检查数据对象是否存在
+        if (!youzhiyouxingData || !haomaiData) {
+          console.log('温度数据对象不存在');
+          return 'N/A';
+        }
+        
+        // 获取今日温度值
+        const youzhiyouxingTemp = parseFloat(youzhiyouxingData.temperature);
+        const haomaiTemp = parseFloat(haomaiData.temperature);
+        
+        // 调试信息
+        console.log('有知有行温度:', youzhiyouxingData.temperature, '转换后:', youzhiyouxingTemp);
+        console.log('好买温度:', haomaiData.temperature, '转换后:', haomaiTemp);
+        
+        // 检查数据是否有效
+        if (isNaN(youzhiyouxingTemp) || isNaN(haomaiTemp)) {
+          console.log('温度数据无效，返回N/A');
+          return 'N/A';
+        }
+        
+        // 计算平均温度
+        const avgTemperature = (youzhiyouxingTemp + haomaiTemp) / 2;
+        
+        // 使用温度-仓位对照表进行线性插值计算
+        const suggestedPosition = this.calculatePositionFromTable(avgTemperature);
+        
+        // 转换为百分比显示
+        return suggestedPosition.toFixed(0) + '%';
+      } catch (error) {
+        console.error('计算建议仓位时出错:', error);
+        return 'N/A';
+      }
+    },
+    // 计算各大类持仓比例
+    categoryRatios() {
+      const ratios = {};
+      // 初始化各大类
+      this.categoryOptions.forEach(category => {
+        ratios[category.label] = 0;
+      });
+      
+      // 计算各大类持仓价值
+      this.positions.forEach(position => {
+        const value = position.amount * (position.category === '现金' ? 1 : (position.currentPrice || 0));
+        if (ratios.hasOwnProperty(position.category)) {
+          ratios[position.category] += value;
+        }
+      });
+      
+      // 转换为百分比
+      Object.keys(ratios).forEach(key => {
+        ratios[key] = this.totalPositionValue > 0 ? ((ratios[key] / this.totalPositionValue) * 100).toFixed(2) : '0.00';
+      });
+      
+      return ratios;
+    },
+    // 计算各小类持仓比例
+    subCategoryRatios() {
+      const ratios = {};
+      
+      // 计算各小类持仓价值
+      this.positions.forEach(position => {
+        // 构造key，格式为"大类-小类"
+        const key = position.subCategory ? `${position.category}-${position.subCategory}` : position.category;
+        const value = position.amount * (position.category === '现金' ? 1 : (position.currentPrice || 0));
+        if (ratios.hasOwnProperty(key)) {
+          ratios[key] += value;
+        } else {
+          ratios[key] = value;
+        }
+      });
+      
+      // 转换为百分比
+      Object.keys(ratios).forEach(key => {
+        ratios[key] = this.totalPositionValue > 0 ? ((ratios[key] / this.totalPositionValue) * 100).toFixed(2) : '0.00';
+      });
+      
+      return ratios;
+    },
+    // 过滤掉"现金-现金"的小类分布
+    filteredSubCategoryRatios() {
+      const filtered = {};
+      Object.keys(this.subCategoryRatios).forEach(key => {
+        // 过滤掉"现金-现金"
+        if (key !== '现金-现金') {
+          filtered[key] = this.subCategoryRatios[key];
+        }
+      });
+      return filtered;
+    },
+    // 计算权益类中A股ETF和A股个股的合计比例
+    equityAStockRatio() {
+      const aStockETF = parseFloat(this.subCategoryRatios['权益类-A股ETF']) || 0;
+      const aStock = parseFloat(this.subCategoryRatios['权益类-A股个股']) || 0;
+      return (aStockETF + aStock).toFixed(2);
+    },
+    // 判断权益类-A股ETF+A股个股比例与建议仓位差距是否大于10%
+    shouldHighlightEquityAStock() {
+      const equityAStockRatio = parseFloat(this.equityAStockRatio) || 0;
+      const suggestedPosition = parseFloat(this.suggestedPositionAH.replace('%', '')) || 0;
+      const diff = Math.abs(equityAStockRatio - suggestedPosition);
+      return diff > 10;
+    }
+  }
+}
 </script>
-<style lang="scss">
+
+<style scoped>
+.table-container {
+  padding: 8px;
+  font-family: Arial, sans-serif;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.data-table th {
+  background-color: #42b983;
+  color: white;
+  font-weight: bold;
+  font-size: 10px;
+}
+
+.data-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.data-table tr:hover {
+  background-color: #f0f8ff;
+}
+
+.highlight {
+  background-color: #fff3cd !important;
+  font-weight: bold;
+  border-left: 3px solid #ffc107;
+}
+
+.deep-green {
+  background-color: #006400 !important;
+  color: white !important;
+}
+
+.data-table td:first-child {
+  font-weight: bold;
+}
+
+/* 模态框样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 10px;
+}
+
+.form-group input {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.save-btn {
+  padding: 8px 16px;
+  background-color: #42b983;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.action-buttons button {
+  margin-bottom: 0; /* 去掉按钮下边距 */
+  white-space: nowrap; /* 防止按钮文字换行 */
+  padding: 4px 10px;
+  font-size: 12px;
+}
+  /* 自定义提示框样式 */
+  .custom-tooltip {
+    position: fixed;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    z-index: 9999;
+    pointer-events: none; /* 防止提示框干扰鼠标事件 */
+    white-space: nowrap;
+  }
 </style>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="libs/tailwind.min.js"></script>
-    <link href="libs/font-awesome.min.css" rel="stylesheet">
-    <script src="libs/vue.global.js"></script>
-    <script src="libs/chart.js"></script>
-    <title>投资提醒</title>
-    <style>
-        /* 自定义样式 */
-        .highlight {
-            background-color: #ffcccc;
-        }
-    </style>
-</head>
-
-<body class="bg-gray-100 font-sans">
-    <div id="app" class="container mx-auto p-4">
-        <h1 class="text-3xl font-bold mb-4 text-center">股票持仓比例提醒</h1>
-        <div class="mt-6 bg-white p-6 rounded shadow-md">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">持仓列表</h2>
-                <div class="space-x-2">
-                    <button @click="updateStockPrices" class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                        更新行情
-                    </button>
-                    <button @click="exportData" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                        导出数据
-                    </button>
-                    <button @click="importData" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                        导入数据
-                    </button>
-                    <button @click="exportToGist" class="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                        导出到云端
-                    </button>
-                    <button @click="importFromGist" class="bg-pink-500 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                        云端导入
-                    </button>
-                </div>
-            </div>
-            <table class="w-full table-auto">
-                <thead>
-                    <tr>
-                        <th class="px-4 py-2 cursor-pointer select-none" @click="sortBy('category')">
-                            分类
-                            <span v-if="sortKey === 'category'">
-                                <span v-if="sortOrder === 'asc'">▲</span>
-                                <span v-else-if="sortOrder === 'desc'">▼</span>
-                                <span v-else>◇</span>
-                            </span>
-                            <span v-else>◇</span>
-                        </th>
-                        <th class="px-4 py-2 cursor-pointer select-none" @click="sortBy('code')">
-                            股票代码
-                            <span v-if="sortKey === 'code'">
-                                <span v-if="sortOrder === 'asc'">▲</span>
-                                <span v-else-if="sortOrder === 'desc'">▼</span>
-                                <span v-else>◇</span>
-                            </span>
-                            <span v-else>◇</span>
-                        </th>
-                        <th class="px-4 py-2 cursor-pointer select-none" @click="sortBy('name')">
-                            股票名称
-                            <span v-if="sortKey === 'name'">
-                                <span v-if="sortOrder === 'asc'">▲</span>
-                                <span v-else-if="sortOrder === 'desc'">▼</span>
-                                <span v-else>◇</span>
-                            </span>
-                            <span v-else>◇</span>
-                        </th>
-                        <th class="px-4 py-2 cursor-pointer select-none" @click="sortBy('quantity')">
-                            持仓数量
-                            <span v-if="sortKey === 'quantity'">
-                                <span v-if="sortOrder === 'asc'">▲</span>
-                                <span v-else-if="sortOrder === 'desc'">▼</span>
-                                <span v-else>◇</span>
-                            </span>
-                            <span v-else>◇</span>
-                        </th>
-                        <th class="px-4 py-2 cursor-pointer select-none" @click="sortBy('price')">
-                            持仓价格
-                            <span v-if="sortKey === 'price'">
-                                <span v-if="sortOrder === 'asc'">▲</span>
-                                <span v-else-if="sortOrder === 'desc'">▼</span>
-                                <span v-else>◇</span>
-                            </span>
-                            <span v-else>◇</span>
-                        </th>
-                        <th class="px-4 py-2 cursor-pointer select-none" @click="sortBy('currentPrice')">
-                            现价
-                            <span v-if="sortKey === 'currentPrice'">
-                                <span v-if="sortOrder === 'asc'">▲</span>
-                                <span v-else-if="sortOrder === 'desc'">▼</span>
-                                <span v-else>◇</span>
-                            </span>
-                            <span v-else>◇</span>
-                        </th>
-                        <th class="px-4 py-2 cursor-pointer select-none" @click="sortBy('value')">
-                            持仓价值
-                            <span v-if="sortKey === 'value'">
-                                <span v-if="sortOrder === 'asc'">▲</span>
-                                <span v-else-if="sortOrder === 'desc'">▼</span>
-                                <span v-else>◇</span>
-                            </span>
-                            <span v-else>◇</span>
-                        </th>
-                        <th class="px-4 py-2 cursor-pointer select-none" @click="sortBy('percentage')">
-                            持仓比例
-                            <span v-if="sortKey === 'percentage'">
-                                <span v-if="sortOrder === 'asc'">▲</span>
-                                <span v-else-if="sortOrder === 'desc'">▼</span>
-                                <span v-else>◇</span>
-                            </span>
-                            <span v-else>◇</span>
-                        </th>
-                        <th class="px-4 py-2">建议仓位</th>
-                        <th class="px-4 py-2">操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(stock, index) in getSortedStocks()" :key="index" :class="{ highlight: stock.percentage > 0.15 }">
-                        <td class="border px-4 py-2">{{ stock.category.split('-')[0] }}<span class="text-sm text-gray-500 ml-1">{{ stock.category.split('-')[1] || '' }}</span></td>
-                        <td class="border px-4 py-2">{{ stock.code }}</td>
-                        <td class="border px-4 py-2">{{ stock.name }}</td>
-                        <td class="border px-4 py-2">{{ stock.quantity }}</td>
-                        <td class="border px-4 py-2">{{ stock.price }}</td>
-                        <td class="border px-4 py-2">{{ stock.currentPrice }}</td>
-                        <td class="border px-4 py-2">{{ stock.value.toFixed(2) }} </td>
-                        <td class="border px-4 py-2">{{ (stock.percentage * 100).toFixed(2) }}%</td>
-                        <td
-                          class="border px-4 py-2"
-                          :class="{ 'bg-yellow-200': shouldHighlightStockSuggestedPosition(stock) }"
-                        >
-                          {{ getSuggestedPosition(stock) }}
-                        </td>
-                        <td class="border px-4 py-2">
-                            <button @click="editStock(stock)" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline">修改</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="bg-white p-6 rounded shadow-md">
-            <form @submit.prevent="addOrUpdateStock">
-                <div class="grid grid-cols-3 gap-4">
-                    <div class="mb-4">
-                        <label for="stockCategory" class="block text-gray-700 font-bold mb-2">分类</label>
-                        <select v-model="newStock.category" id="stockCategory" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                            <optgroup label="A股">
-                                <option value="A股-ETF">ETF</option>
-                                <option value="A股-个股">个股</option>
-                            </optgroup>
-                            <optgroup label="港股">
-                                <option value="港股-ETF">ETF</option>
-                                <option value="港股-个股">个股</option>
-                            </optgroup>
-                            <optgroup label="其他海外">
-                                <option value="其他海外-ETF">ETF</option>
-                                <option value="其他海外-个股">个股</option>
-                            </optgroup>
-                            <option value="国内债">国内债</option>
-                            <option value="黄金">黄金</option>
-                            <option value="石油">石油</option>
-                            <option value="现金">现金</option>
-                        </select>
-                    </div>
-                    <div class="mb-4">
-                        <label for="stockCode" class="block text-gray-700 font-bold mb-2">股票代码</label>
-                        <input type="text" v-model="newStock.code" id="stockCode" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="输入股票代码">
-                    </div>
-                    <div class="mb-4">
-                        <label for="stockName" class="block text-gray-700 font-bold mb-2">股票名称</label>
-                        <input type="text" v-model="newStock.name" id="stockName" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="输入股票名称">
-                    </div>
-                    <div class="mb-4">
-                        <label for="quantity" class="block text-gray-700 font-bold mb-2">持仓数量</label>
-                        <input type="number" v-model="newStock.quantity" id="quantity" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="输入持仓数量">
-                    </div>
-                    <div class="mb-4">
-                        <label for="price" class="block text-gray-700 font-bold mb-2">持仓价格</label>
-                        <input type="number" v-model="newStock.price" id="price" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="输入持仓价格" min="0" max="10000" step="0.001">
-                    </div>
-                    <div class="mb-4">
-                        <label for="peRatio" class="block text-gray-700 font-bold mb-2">当前PE</label>
-                        <input type="number" v-model="newStock.peRatio" id="peRatio" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="输入当前PE" min="0" max="100" step="0.01">
-                    </div>
-                    <div class="mb-4">
-                        <label for="pePercentiles" class="block text-gray-700 font-bold mb-2">PE分位数</label>
-                        <input type="text" v-model="newStock.pePercentiles" id="pePercentiles" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="输入PE分位数">
-                    </div>
-                    <div class="mb-4 flex items-end">
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full">
-                            {{ editingIndex!== -1? '保存修改' : '添加股票' }}
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="mb-6 bg-white p-6 rounded shadow-md flex flex-col items-center">
-            <h2 class="text-xl font-bold mb-2">分类持仓比例</h2>
-            <div style="max-width: 400px; width: 100%;">
-                <canvas id="categoryChart" style="width:100%;height:100%;" width="300" height="300"></canvas>
-            </div>
-        </div>
-        <div class="w-full overflow-x-auto mt-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-lg font-semibold">指数参考</h3>
-                <button @click="addNewIndex" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm">
-                    添加指数
-                </button>
-            </div>
-            <table class="min-w-full table-auto border-collapse">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="border px-4 py-2 text-sm">指数名称</th>
-                        <th class="border px-4 py-2 text-sm">代码</th>
-                        <th class="border px-4 py-2 text-sm">现点位</th>
-                        <th class="border px-4 py-2 text-sm">支撑点位</th>
-                        <th class="border px-4 py-2 text-sm">距离支撑</th>
-                        <th class="border px-4 py-2 text-sm">近两年最低</th>
-                        <th class="border px-4 py-2 text-sm">已反弹</th>
-                        <th class="border px-4 py-2 text-sm">前高</th>
-                        <th class="border px-4 py-2 text-sm">最大跌幅</th>
-                        <th class="border px-4 py-2 text-sm">极度价值</th>
-                        <th class="border px-4 py-2 text-sm">价值区间下沿</th>
-                        <th class="border px-4 py-2 text-sm">价值区间上沿</th>
-                        <th class="border px-4 py-2 text-sm">正常区间下沿</th>
-                        <th class="border px-4 py-2 text-sm">正常区间上沿</th>
-                        <th class="border px-4 py-2 text-sm">压力位</th>
-                        <th class="border px-4 py-2 text-sm">现市盈率</th>
-                        <th class="border px-4 py-2 text-sm">建议仓位</th>
-                        <th class="border px-4 py-2 text-sm">操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="(index, idx) in indexData" :key="index.code">
-                        <td class="border px-4 py-2 text-sm">{{ index.name }}</td>
-                        <td class="border px-4 py-2 text-sm">{{ index.code }}</td>
-                        <td class="border px-4 py-2 text-sm">{{ index.currentLevel }}</td>
-                        <td class="border px-4 py-2 text-sm">{{ index.supportLevel }}</td>
-                        <td class="border px-4 py-2 text-sm">
-                            {{ typeof index.distanceToSupport === 'number' ? index.distanceToSupport.toFixed(2) : '' }}%
-                        </td>
-                        <td class="border px-4 py-2 text-sm">{{ index.twoYearLow }}</td>
-                        <td class="border px-4 py-2 text-sm">
-                            {{ typeof index.bounceRate === 'number' ? index.bounceRate.toFixed(2) : '' }}%
-                        </td>
-                        <td class="border px-4 py-2 text-sm">{{ index.previousHigh }}</td>
-                        <td class="border px-4 py-2 text-sm">
-                            {{ typeof index.maxDropRate === 'number' ? index.maxDropRate.toFixed(2) : '' }}%
-                        </td>
-                        <td class="border px-4 py-2 text-sm" :class="{ 'bg-green-200': index.currentLevel <= parseFloat(index.extremeValue) }">{{ index.extremeValue }}</td>
-                        <td class="border px-4 py-2 text-sm" :class="{ 'bg-green-100': index.currentLevel > parseFloat(index.valueRangeLower) }">{{ index.valueRangeLower }}</td>
-                        <td class="border px-4 py-2 text-sm" :class="{ 'bg-green-100': index.currentLevel > parseFloat(index.valueRangeUpper) }">{{ index.valueRangeUpper }}</td>
-                        <td class="border px-4 py-2 text-sm" :class="{ 'bg-green-100': index.currentLevel > parseFloat(index.normalRangeLower) }">{{ index.normalRangeLower }}</td>
-                        <td class="border px-4 py-2 text-sm" :class="{ 'bg-green-100': index.currentLevel > parseFloat(index.normalRangeUpper) }">{{ index.normalRangeUpper }}</td>
-                        <td class="border px-4 py-2 text-sm" :class="{ 'bg-red-200': index.currentLevel > parseFloat(index.resistanceLevel) }">{{ index.resistanceLevel }}</td>
-                        <td class="border px-4 py-2 text-sm">{{ index.peRatio || '-' }}</td>
-                        <td class="border px-4 py-2 text-sm">
-                            {{ index.suggestedPosition || '-' }}
-                            <button @click="editSuggestedPosition(idx)" class="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded text-sm">修改</button>
-                        </td>
-                        <td class="border px-4 py-2 text-sm">
-                            <button @click="editIndex(idx)" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded text-sm mr-1">修改</button>
-                            <button @click="deleteIndex(idx)" class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded text-sm">删除</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div v-if="showIndexEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl mx-4">
-                <h3 class="text-lg font-bold mb-4">{{ isNewIndex ? '添加指数' : '修改指数数据' }}</h3>
-                <form @submit.prevent="saveIndexEdit" class="space-y-4">
-                    <div class="grid grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">指数名称</label>
-                            <input type="text" v-model="editingIndex.name" class="w-full border rounded px-3 py-2" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">代码</label>
-                            <input type="text" v-model="editingIndex.code" class="w-full border rounded px-3 py-2" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">现点位</label>
-                            <input type="number" v-model.number="editingIndex.currentLevel" class="w-full border rounded px-3 py-2" required step="0.01">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">支撑点位</label>
-                            <input type="number" v-model.number="editingIndex.supportLevel" class="w-full border rounded px-3 py-2" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">近两年最低</label>
-                            <input type="number" v-model.number="editingIndex.twoYearLow" class="w-full border rounded px-3 py-2" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">前高</label>
-                            <input type="number" v-model.number="editingIndex.previousHigh" class="w-full border rounded px-3 py-2" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">极度价值</label>
-                            <input type="text" v-model="editingIndex.extremeValue" class="w-full border rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">价值区间下沿</label>
-                            <input type="text" v-model="editingIndex.valueRangeLower" class="w-full border rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">价值区间上沿</label>
-                            <input type="text" v-model="editingIndex.valueRangeUpper" class="w-full border rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">正常区间下沿</label>
-                            <input type="text" v-model="editingIndex.normalRangeLower" class="w-full border rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">正常区间上沿</label>
-                            <input type="text" v-model="editingIndex.normalRangeUpper" class="w-full border rounded px-3 py-2">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">压力位</label>
-                            <input type="number" v-model.number="editingIndex.resistanceLevel" class="w-full border rounded px-3 py-2">
-                        </div>
-                    </div>
-                    <div class="flex justify-end space-x-4 mt-6">
-                        <button type="button" @click="closeIndexEdit" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">取消</button>
-                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">保存</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    <script>
-        const { createApp } = Vue;
-
-        createApp({
-            data() {
-                return {
-                    newStock: {
-                        code: '',
-                        name: '',
-                        quantity: 0,
-                        price: 0,
-                        currentPrice: 0,
-                        category: 'A股',
-                        peRatio: 0,
-                        pePercentiles: ''
-                    },
-                    stocks: JSON.parse(localStorage.getItem('stocks')) || [],
-                    editingIndex: -1,
-                    sortKey: '',
-                    sortOrder: '',
-                    categoryChart: null,
-                    indexData: [],
-                    showIndexEditModal: false,
-                    editingIndexIdx: -1,
-                    isNewIndex: false
-                };
-            },
-            methods: {
-                saveToLocalStorage() {
-                    localStorage.setItem('stocks', JSON.stringify(this.stocks));
-                },
-                addOrUpdateStock() {
-                    const { code, name, quantity, price, category, peRatio, pePercentiles } = this.newStock;
-                    let currentPrice = this.newStock.currentPrice;
-                    if (name === '现金') {
-                        currentPrice = 1;
-                    }
-                    if (code && name && quantity > 0 && price >= 0.000 && price <= 10000.000) {
-                        const value = quantity * currentPrice;
-                        if (this.editingIndex !== -1) {
-                            this.stocks[this.editingIndex] = {
-                                code,
-                                name,
-                                quantity,
-                                price,
-                                currentPrice,
-                                value,
-                                category,
-                                peRatio,
-                                pePercentiles
-                            };
-                            this.editingIndex = -1;
-                        } else {
-                            this.stocks.push({
-                                code,
-                                name,
-                                quantity,
-                                price,
-                                currentPrice,
-                                value,
-                                category,
-                                peRatio,
-                                pePercentiles
-                            });
-                        }
-                        this.calculatePercentages();
-                        this.saveToLocalStorage();
-                        this.renderCategoryChart();
-                        this.newStock = {
-                            code: '',
-                            name: '',
-                            quantity: 0,
-                            price: 0,
-                            currentPrice: 0,
-                            category: 'A股',
-                            peRatio: 0,
-                            pePercentiles: ''
-                        };
-                    }
-                },
-                calculatePercentages() {
-                    const totalValue = this.stocks.reduce((sum, stock) => sum + stock.value, 0);
-                    this.stocks.forEach(stock => {
-                        stock.percentage = stock.value / totalValue;
-                    });
-                },
-                editStock(stock) {
-                    this.editingIndex = this.stocks.indexOf(stock);
-                    this.newStock = {
-                        code: stock.code,
-                        name: stock.name,
-                        quantity: stock.quantity,
-                        price: stock.price,
-                        currentPrice: stock.currentPrice,
-                        category: stock.category || 'A股',
-                        peRatio: stock.peRatio || 0,
-                        pePercentiles: stock.pePercentiles || ''
-                    };
-                },
-                buyStock(index) {
-                    const stock = this.stocks[index];
-                    const quantity = parseInt(prompt(`请输入要买入的${stock.name}数量：`));
-                    if (quantity && quantity > 0) {
-                        stock.quantity += quantity;
-                        stock.value = stock.quantity * stock.price;
-                        this.calculatePercentages();
-                        this.saveToLocalStorage();
-                    }
-                },
-                sellStock(index) {
-                    const stock = this.stocks[index];
-                    const quantity = parseInt(prompt(`请输入要卖出的${stock.name}数量：`));
-                    if (quantity && quantity > 0 && quantity <= stock.quantity) {
-                        stock.quantity -= quantity;
-                        stock.value = stock.quantity * stock.price;
-                        this.calculatePercentages();
-                        this.saveToLocalStorage();
-                    } else if (quantity >= stock.quantity) {
-                        alert('卖出数量不能大于持仓数量！');
-                    }
-                },
-                // 导出数据
-                exportData() {
-                    const data = {
-                        stocks: this.stocks,
-                        indexData: this.indexData
-                    };
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `portfolio_and_index_${new Date().toISOString().split('T')[0]}.json`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                },
-                importData() {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = '.json';
-                    input.onchange = (e) => {
-                        const file = e.target.files[0];
-                        if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                                try {
-                                    const importedData = JSON.parse(event.target.result);
-                                    // 兼容老格式（只有 stocks 数组）
-                                    if (Array.isArray(importedData)) {
-                                        this.stocks = importedData;
-                                        this.calculatePercentages();
-                                        this.saveToLocalStorage();
-                                        this.renderCategoryChart();
-                                        alert('持仓数据导入成功！');
-                                    } else if (importedData.stocks && importedData.indexData) {
-                                        this.stocks = importedData.stocks;
-                                        this.indexData = importedData.indexData;
-                                        this.calculatePercentages();
-                                        this.saveToLocalStorage();
-                                        localStorage.setItem('indexData', JSON.stringify(this.indexData));
-                                        this.renderCategoryChart();
-                                        alert('持仓和指数数据导入成功！');
-                                    } else {
-                                        alert('导入的数据格式不正确！');
-                                    }
-                                } catch (error) {
-                                    alert('导入失败：文件格式错误！');
-                                }
-                            };
-                            reader.readAsText(file);
-                        }
-                    };
-                    input.click();
-                },
-
-                //  更新行情函数
-                async updateStockPrices() {
-                    try {
-                        // 1. 获取所有股票和指数的代码
-                        const stockCodes = this.stocks.map(stock => stock.code.trim());
-                        const indexCodes = this.indexData.map(idx => idx.code.trim());
-                        // 合并去重
-                        const allCodes = Array.from(new Set([...stockCodes, ...indexCodes])).filter(Boolean);
-                        console.log('allCodes:', allCodes);
-                        if (allCodes.length === 0) {
-                            console.log('没有有效的股票或指数代码可供查询。');
-                            return;
-                        }
-
-                        // 2. 请求行情
-                        const querySymbols = allCodes.join(',');
-                        const response = await fetch(`https://qt.gtimg.cn/q=${querySymbols}`);
-                        const text = await response.text();
-
-                        // 3. 解析返回数据
-                        const individualStockData = text.trim().split(';').filter(s => s.length > 0);
-                        console.log('individualStockData:', individualStockData);
-                        individualStockData.forEach(stockStr => {
-                            // 直接使用 stockStr，不需要正则匹配
-                            const fields = stockStr.split('~');
-                            console.log('fields:', fields);
-                            if (fields.length > 3) {
-                                const currentPriceStr = fields[3];
-                                const currentPrice = parseFloat(currentPriceStr);
-                                const code = fields[2]; // 股票代码在第三个字段
-
-                                // 4. 更新持仓股票
-                                const stock = this.stocks.find(s => s.code.includes(code));
-                                if (stock && !isNaN(currentPrice)) {
-                                    stock.currentPrice = currentPrice;
-                                    stock.value = stock.quantity * currentPrice;
-                                }
-
-                                // 5. 更新指数点位
-                                const idx = this.indexData.find(i => i.code.includes(code));
-                                if (idx && !isNaN(currentPrice)) {
-                                    idx.currentLevel = currentPrice;
-                                    // 获取市盈率
-                                    console.log('处理指数:', idx.code, '字段数据:', fields);
-                                    // 使用腾讯接口获取市盈率
-                                    const peField = fields[39]; // 腾讯接口的市盈率字段
-                                    console.log('peField:', peField);
-                                    if (peField && peField !== '-') {
-                                        idx.peRatio = parseFloat(peField);
-                                        console.log('设置市盈率:', idx.peRatio);
-                                    } else {
-                                        idx.peRatio = null;
-                                        console.log('市盈率数据无效');
-                                    }
-                                }
-                            }
-                        });
-
-                        this.calculatePercentages();
-                        this.saveToLocalStorage();
-                        // 保存指数数据到本地
-                        this.indexData.forEach(idx => {
-                            if (
-                                typeof idx.currentLevel === 'number' &&
-                                typeof idx.supportLevel === 'number' &&
-                                idx.supportLevel !== 0
-                            ) {
-                                idx.distanceToSupport = (idx.currentLevel - idx.supportLevel) / idx.supportLevel * 100;
-                            }
-                            if (
-                                typeof idx.currentLevel === 'number' &&
-                                typeof idx.twoYearLow === 'number' &&
-                                idx.twoYearLow !== 0
-                            ) {
-                                idx.bounceRate = (idx.currentLevel - idx.twoYearLow) / idx.twoYearLow * 100;
-                            }
-                            if (
-                                typeof idx.currentLevel === 'number' &&
-                                typeof idx.previousHigh === 'number' &&
-                                idx.previousHigh !== 0
-                            ) {
-                                idx.maxDropRate = (idx.currentLevel - idx.previousHigh) / idx.previousHigh * 100;
-                            }
-                        });
-                        localStorage.setItem('indexData', JSON.stringify(this.indexData));
-                        this.renderCategoryChart();
-                        alert('股票和指数数据更新完成！');
-
-                        // 保证现金现价为1
-                        this.stocks.forEach(stock => {
-                            if (stock.name === '现金') {
-                                stock.currentPrice = 1;
-                                stock.value = stock.quantity * 1;
-                            }
-                        });
-                        this.calculatePercentages();
-                        this.saveToLocalStorage();
-                    } catch (error) {
-                        console.error('获取股票数据失败:', error);
-                        alert('获取股票数据失败，请稍后重试！\n可能原因：\n1. 网络连接问题\n2. 股票代码格式不正确\n3. 服务器暂时不可用');
-                    }
-                },
-
-                // 自动更新数据
-                startAutoUpdate() {
-                    // 每4小时更新一次数据
-                    setInterval(() => {
-                        this.updateStockPrices();
-                    }, 14400000); // 4小时 = 4 * 60 * 60 * 1000毫秒
-                },
-
-                //  排序函数
-                sortBy(key) {
-                    if (this.sortKey === key) {
-                        if (this.sortOrder === '') {
-                            this.sortOrder = 'asc';
-                        } else if (this.sortOrder === 'asc') {
-                            this.sortOrder = 'desc';
-                        } else {
-                            this.sortOrder = '';
-                        }
-                    } else {
-                        this.sortKey = key;
-                        this.sortOrder = 'asc';
-                    }
-                },
-                getSortedStocks() {
-                    if (!this.sortKey || this.sortOrder === '') {
-                        return this.stocks;
-                    }
-                    return [...this.stocks].sort((a, b) => {
-                        if (a[this.sortKey] === undefined || b[this.sortKey] === undefined) return 0;
-                        if (typeof a[this.sortKey] === 'string') {
-                            if (this.sortOrder === 'asc') {
-                                return a[this.sortKey].localeCompare(b[this.sortKey]);
-                            } else {
-                                return b[this.sortKey].localeCompare(a[this.sortKey]);
-                            }
-                        } else {
-                            if (this.sortOrder === 'asc') {
-                                return a[this.sortKey] - b[this.sortKey];
-                            } else {
-                                return b[this.sortKey] - a[this.sortKey];
-                            }
-                        }
-                    });
-                },
-
-                // 渲染分类图表
-                renderCategoryChart() {
-                    const categoryMap = {};
-                    const totalValue = this.stocks.reduce((sum, stock) => sum + stock.value, 0);
-
-                    // 计算每个主分类的市值和比例
-                    this.stocks.forEach(stock => {
-                        const mainCategory = stock.category.split('-')[0];
-                        if (!categoryMap[mainCategory]) {
-                            categoryMap[mainCategory] = 0;
-                        }
-                        categoryMap[mainCategory] += stock.value;
-                    });
-
-                    const categories = Object.keys(categoryMap);
-                    const values = Object.values(categoryMap);
-                    const colors = [
-                        '#4F46E5', '#22D3EE', '#F59E42', '#F43F5E', '#10B981', '#FBBF24', '#6366F1'
-                    ];
-
-                    if (this.categoryChart) {
-                        this.categoryChart.destroy();
-                    }
-
-                    const ctx = document.getElementById('categoryChart').getContext('2d');
-                    this.categoryChart = new Chart(ctx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: categories,
-                            datasets: [{
-                                data: values,
-                                backgroundColor: colors,
-                            }]
-                        },
-                        options: {
-                            plugins: {
-                                legend: {
-                                    position: 'bottom'
-                                },
-                                tooltip: {
-                                    callbacks: {
-                                        label: function(context) {
-                                            const percentage = (context.raw / totalValue * 100).toFixed(2);
-                                            return `${context.label}: ${percentage}%`;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    });
-                },
-                addNewIndex() {
-                    this.editingIndex = {
-                        name: '',
-                        code: '',
-                        currentLevel: 0,
-                        supportLevel: 0,
-                        distanceToSupport: 0,
-                        twoYearLow: 0,
-                        bounceRate: 0,
-                        previousHigh: 0,
-                        maxDropRate: 0,
-                        extremeValue: '',
-                        valueRangeLower: '',
-                        valueRangeUpper: '',
-                        normalRangeLower: '',
-                        normalRangeUpper: '',
-                        resistanceLevel: 0
-                    };
-                    this.isNewIndex = true;
-                    this.showIndexEditModal = true;
-                },
-                editIndex(idx) {
-                    this.editingIndex = { ...this.indexData[idx] };
-                    this.editingIndexIdx = idx;
-                    this.isNewIndex = false;
-                    this.showIndexEditModal = true;
-                },
-                closeIndexEdit() {
-                    this.showIndexEditModal = false;
-                    this.editingIndex = null;
-                    this.editingIndexIdx = -1;
-                },
-                saveIndexEdit() {
-                    // 基础校验
-                    if (!this.editingIndex.name || !this.editingIndex.code) {
-                        alert('指数名称和代码不能为空！');
-                        return;
-                    }
-                    // 自动计算，存为数字
-                    const idx = this.editingIndex;
-                    idx.distanceToSupport = (idx.currentLevel - idx.supportLevel) / idx.supportLevel * 100;
-                    idx.bounceRate = (idx.currentLevel - idx.twoYearLow) / idx.twoYearLow * 100;
-                    idx.maxDropRate = (idx.currentLevel - idx.previousHigh) / idx.previousHigh * 100;
-
-                    if (this.isNewIndex) {
-                        this.indexData.push({ ...idx });
-                    } else {
-                        this.indexData[this.editingIndexIdx] = { ...idx };
-                    }
-                    localStorage.setItem('indexData', JSON.stringify(this.indexData));
-                    this.closeIndexEdit();
-                },
-                deleteIndex(idx) {
-                    if (confirm('确定要删除这个指数吗？')) {
-                        this.indexData.splice(idx, 1);
-                        localStorage.setItem('indexData', JSON.stringify(this.indexData));
-                    }
-                },
-                exportToGist() {
-                    let token = localStorage.getItem('githubToken') || '';
-                    token = prompt('请输入你的 GitHub Token（只需 gist 权限）', token);
-                    if (!token) return alert('未输入 Token，无法导出！');
-
-                    // 将 Token 保存到 localStorage
-                    localStorage.setItem('githubToken', token);
-
-                    const data = {
-                        stocks: this.stocks,
-                        indexData: this.indexData
-                    };
-                    fetch('https://api.github.com/gists', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': 'token ' + token,
-                            'Accept': 'application/vnd.github.v3+json'
-                        },
-                        body: JSON.stringify({
-                            description: "股票持仓比例提醒数据",
-                            public: false,
-                            files: {
-                                "portfolio.json": {
-                                    content: JSON.stringify(data, null, 2)
-                                }
-                            }
-                        })
-                    })
-                    .then(res => res.json())
-                    .then(res => {
-                        if (res.html_url) {
-                            // 保存 gist URL 到 localStorage
-                            localStorage.setItem('gistUrl', res.html_url);
-                            alert('导出成功！Gist 地址：' + res.html_url + '\n请妥善保存此链接，后续可用于云端导入。');
-                        } else {
-                            alert('导出失败：' + (res.message || '未知错误'));
-                        }
-                    })
-                    .catch(err => alert('导出失败：' + err));
-                },
-                importFromGist() {
-                    const savedGistUrl = localStorage.getItem('gistUrl') || '';
-                    const gistUrl = prompt('请输入 Gist 的 URL 或 ID', savedGistUrl);
-                    if (!gistUrl) return;
-                    // 支持直接输入 Gist ID 或完整 URL
-                    let gistId = gistUrl.trim();
-                    if (gistId.includes('/')) {
-                        gistId = gistId.split('/').pop();
-                    }
-                    fetch('https://api.github.com/gists/' + gistId)
-                        .then(res => res.json())
-                        .then(res => {
-                            if (res.files && res.files['portfolio.json']) {
-                                const content = res.files['portfolio.json'].content;
-                                const importedData = JSON.parse(content);
-                                if (importedData.stocks && importedData.indexData) {
-                                    this.stocks = importedData.stocks;
-                                    this.indexData = importedData.indexData;
-                                    this.calculatePercentages();
-                                    this.saveToLocalStorage();
-                                    localStorage.setItem('indexData', JSON.stringify(this.indexData));
-                                    this.renderCategoryChart();
-                                    alert('云端数据导入成功！');
-                                } else {
-                                    alert('Gist 文件内容格式不正确！');
-                                }
-                            } else {
-                                alert('未找到 portfolio.json 文件！');
-                            }
-                        })
-                        .catch(err => alert('导入失败：' + err));
-                },
-
-                
-                editSuggestedPosition(idx) {
-                    const index = this.indexData[idx];
-                    const currentPE = parseFloat(index.peRatio);
-                    if (!currentPE) {
-                        alert('当前PE数据不可用，请先更新行情数据！');
-                        return;
-                    }
-
-                    // 创建模态对话框
-                    const modal = document.createElement('div');
-                    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                    modal.innerHTML = `
-                        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-3xl">
-                            <h3 class="text-lg font-bold mb-4">设置估值区间</h3>
-                            <div class="space-y-4">
-                                <div class="mb-4">
-                                    <label class="block text-sm font-medium mb-1">PE分位数数据（用逗号分隔，从PE0到PE100）</label>
-                                    <input type="text" id="pePercentiles" class="w-full border rounded px-3 py-2" 
-                                        placeholder="例如：10,12,14,16,18,20,22,24,26,28,30" 
-                                        value="${index.pePercentiles || ''}">
-                                    <p class="text-sm text-gray-500 mt-1">请输入11个PE值，分别对应0%,10%,20%...100%分位数</p>
-                                </div>
-                                <div class="mt-4">
-                                    <p class="text-sm text-gray-600">当前PE: ${currentPE.toFixed(2)}</p>
-                                    <p class="text-sm text-gray-600">建议仓位: ${this.calculatePositionFromPercentiles(currentPE, index.pePercentiles)}%</p>
-                                </div>
-                                <div class="mt-4">
-                                    <table class="min-w-full border-collapse border border-gray-300">
-                                        <thead>
-                                            <tr class="bg-gray-100">
-                                                <th class="border px-4 py-2 text-sm">历史PE分位数</th>
-                                                <th class="border px-4 py-2 text-sm">PE值</th>
-                                                <th class="border px-4 py-2 text-sm">估值状态</th>
-                                                <th class="border px-4 py-2 text-sm">建议仓位</th>
-                                                <th class="border px-4 py-2 text-sm">操作信号</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="percentileTableBody">
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <div class="flex justify-end space-x-4 mt-6">
-                                <button id="cancelBtn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">取消</button>
-                                <button id="saveBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">保存</button>
-                            </div>
-                        </div>
-                    `;
-
-                    document.body.appendChild(modal);
-
-                    // 添加事件监听
-                    const pePercentilesInput = modal.querySelector('#pePercentiles');
-                    const cancelBtn = modal.querySelector('#cancelBtn');
-                    const saveBtn = modal.querySelector('#saveBtn');
-                    const tableBody = modal.querySelector('#percentileTableBody');
-
-                    // 更新表格数据
-                    const updateTable = () => {
-                        const peValues = pePercentilesInput.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-                        if (peValues.length !== 11) {
-                            tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-red-500">请输入11个有效的PE值</td></tr>';
-                            return;
-                        }
-
-                        const percentiles = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-                        const positions = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0];
-                        const statuses = ['极度低估', '极度低估', '低估', '低估', '偏低', '合理估值', '偏高', '高估', '严重高估', '严重高估', '极度高估'];
-                        const signals = ['强烈买入', '买入', '买入', '买入', '观望', '观望', '减仓', '减仓', '卖出', '卖出', '清仓'];
-                        const bgColors = ['bg-green-100', 'bg-green-100', 'bg-green-100', 'bg-green-100', 'bg-yellow-100', 'bg-yellow-100', 'bg-orange-100', 'bg-orange-100', 'bg-red-100', 'bg-red-100', 'bg-red-100'];
-                        const textColors = ['text-green-600', 'text-green-600', 'text-green-600', 'text-green-600', 'text-yellow-600', 'text-yellow-600', 'text-orange-600', 'text-orange-600', 'text-red-600', 'text-red-600', 'text-red-600'];
-
-                        let tableHTML = '';
-                        for (let i = 0; i < percentiles.length; i++) {
-                            tableHTML += `
-                                <tr>
-                                    <td class="border px-4 py-2 text-sm">${percentiles[i]}%</td>
-                                    <td class="border px-4 py-2 text-sm">${peValues[i].toFixed(2)}</td>
-                                    <td class="border px-4 py-2 text-sm ${bgColors[i]}">${statuses[i]}</td>
-                                    <td class="border px-4 py-2 text-sm">${positions[i]}%</td>
-                                    <td class="border px-4 py-2 text-sm ${textColors[i]}">${signals[i]}</td>
-                                </tr>
-                            `;
-                        }
-
-                        // 添加当前PE行
-                        const currentPosition = this.calculatePositionFromPercentiles(currentPE, peValues);
-                        let currentStatus = '';
-                        let currentBgColor = '';
-                        let currentSignal = '';
-                        let currentTextColor = '';
-
-                        if (currentPE <= peValues[0]) {
-                            currentStatus = '极度低估';
-                            currentBgColor = 'bg-green-100';
-                            currentSignal = '强烈买入';
-                            currentTextColor = 'text-green-600';
-                        } else if (currentPE >= peValues[peValues.length - 1]) {
-                            currentStatus = '极度高估';
-                            currentBgColor = 'bg-red-100';
-                            currentSignal = '清仓';
-                            currentTextColor = 'text-red-600';
-                        } else {
-                            for (let i = 0; i < peValues.length - 1; i++) {
-                                if (currentPE >= peValues[i] && currentPE < peValues[i + 1]) {
-                                    currentStatus = statuses[i];
-                                    currentBgColor = bgColors[i];
-                                    currentSignal = signals[i];
-                                    currentTextColor = textColors[i];
-                                    break;
-                                }
-                            }
-                        }
-
-                        tableHTML += `
-                            <tr class="bg-blue-50">
-                                <td class="border px-4 py-2 text-sm font-bold">当前</td>
-                                <td class="border px-4 py-2 text-sm font-bold">${currentPE.toFixed(2)}</td>
-                                <td class="border px-4 py-2 text-sm font-bold ${currentBgColor}">${currentStatus}</td>
-                                <td class="border px-4 py-2 text-sm font-bold">${currentPosition}%</td>
-                                <td class="border px-4 py-2 text-sm font-bold ${currentTextColor}">${currentSignal}</td>
-                            </tr>
-                        `;
-
-                        tableBody.innerHTML = tableHTML;
-                    };
-
-                    // 监听输入变化
-                    pePercentilesInput.addEventListener('input', updateTable);
-
-                    // 保存按钮事件
-                    saveBtn.addEventListener('click', () => {
-                        const peValues = pePercentilesInput.value.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-                        
-                        if (peValues.length !== 11) {
-                            alert('请输入11个有效的PE值！');
-                            return;
-                        }
-
-                        // 验证PE值是否递增
-                        for (let i = 1; i < peValues.length; i++) {
-                            if (peValues[i] <= peValues[i-1]) {
-                                alert('PE值必须递增！');
-                                return;
-                            }
-                        }
-
-                        index.pePercentiles = peValues;
-                        index.suggestedPosition = this.calculatePositionFromPercentiles(currentPE, peValues).toFixed(2) + '%';
-                        localStorage.setItem('indexData', JSON.stringify(this.indexData));
-                        document.body.removeChild(modal);
-                    });
-
-                    // 取消按钮事件
-                    cancelBtn.addEventListener('click', () => {
-                        document.body.removeChild(modal);
-                    });
-
-                    // 初始化显示
-                    updateTable();
-                },
-
-                // 根据PE分位数计算建议仓位
-                calculatePositionFromPercentiles(currentPE, pePercentiles) {
-                    if (!currentPE || !pePercentiles || pePercentiles.length !== 11) return 0;
-                    
-                    // 如果当前PE小于等于最低PE，返回100%仓位
-                    if (currentPE <= pePercentiles[0]) return 100;
-                    
-                    // 如果当前PE大于等于最高PE，返回0%仓位
-                    if (currentPE >= pePercentiles[pePercentiles.length - 1]) return 0;
-                    
-                    // 找到当前PE所在区间
-                    for (let i = 0; i < pePercentiles.length - 1; i++) {
-                        if (currentPE >= pePercentiles[i] && currentPE < pePercentiles[i + 1]) {
-                            // 计算在当前区间内的相对位置
-                            const range = pePercentiles[i + 1] - pePercentiles[i];
-                            const position = (currentPE - pePercentiles[i]) / range;
-                            
-                            // 根据分位数计算仓位
-                            const positions = [100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0];
-                            return Math.round(positions[i] + (positions[i + 1] - positions[i]) * position);
-                        }
-                    }
-                    
-                    return 0;
-                },
-
-                getSuggestedPosition(stock) {
-                    // 查找对应的指数（通过名称匹配）
-                    console.log('当前股票:', stock.name);
-                    console.log('所有指数:', this.indexData);
-                    const index = this.indexData.find(idx => idx.name === stock.name);
-                    console.log('找到的指数:', index);
-                    if (index && index.suggestedPosition) {
-                        // 从建议仓位字符串中提取数字（去掉%符号）
-                        const suggestedPosition = parseFloat(index.suggestedPosition);
-                        console.log('建议仓位原始值:', index.suggestedPosition);
-                        console.log('解析后的建议仓位:', suggestedPosition);
-                        if (!isNaN(suggestedPosition)) {
-                            // 将建议仓位乘以10%
-                            const finalPosition = (suggestedPosition * 0.15).toFixed(2) + '%';
-                            console.log('最终建议仓位:', finalPosition);
-                            return finalPosition;
-                        }
-                    }
-                    return '-';
-                },
-
-                shouldHighlightStockSuggestedPosition(stock) {
-                    // 获取建议仓位（去掉%并转为数字）
-                    const index = this.indexData.find(idx => idx.name === stock.name);
-                    if (!index || !index.suggestedPosition) return false;
-                    const suggest = parseFloat(index.suggestedPosition);
-                    if (isNaN(suggest)) return false;
-
-                    // 获取实际持仓比例（百分比数值）
-                    const holdPercent = (stock.percentage || 0) * 100;
-
-                    // 输出调试信息
-                    console.log(
-                        `股票: ${stock.name}, 建议仓位: ${suggest}%, 实际持仓: ${holdPercent}%, 差值: ${Math.abs(suggest - holdPercent)}`
-                    );
-
-                    // 差值大于等于3%则高亮
-                    return Math.abs(suggest - holdPercent) >= 3;
-                }
-            },
-            mounted() {
-                // 加载本地存储的指数数据
-                const savedIndexData = localStorage.getItem('indexData');
-                if (savedIndexData) {
-                    try {
-                        this.indexData = JSON.parse(savedIndexData);
-                        console.log('加载的指数数据:', this.indexData);
-                    } catch (e) {
-                        console.error('解析指数数据失败:', e);
-                    }
-                }
-
-                this.updateStockPrices();
-                this.startAutoUpdate();
-                this.renderCategoryChart();
-            }
-        }).mount('#app');
-    </script>
-</body>
+<style lang="scss">
+button {
+  margin-bottom: 20px;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+table, th, td {
+  border: 1px solid #ddd;
+}
+.th, td {
+  padding: 6px;
+  text-align: left;
+}
+th {
+  padding: 8px 15px;
+  font-size: 11px;
+}
+</style>

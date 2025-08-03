@@ -61,7 +61,7 @@
   ],
   "options_ui": {
     "page": "html/options.html",
-    "open_in_tab": false
+    "open_in_tab": true
   },
   "host_permissions": [
     "*://*.baidu.com/*"
