@@ -12,7 +12,7 @@
      建议A股仓位：{{ suggestedPositionAH }}
    </span>
   </h2>
-  <table>
+  <table class="temperature-table">
     <thead>
       <tr>
         <th>温度类型</th>
@@ -2726,6 +2726,39 @@ export default {
 .table-container {
   padding: 8px;
   font-family: Arial, sans-serif;
+}
+
+.temperature-table {
+  width: 100%;
+  max-width: 900px; /* 限制最大宽度 */
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-size: 14px; /* 恢复原来字体大小 */
+  margin-bottom: 20px;
+}
+
+.temperature-table th,
+.temperature-table td {
+  padding: 4px 6px; /* 减小内边距 */
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.temperature-table th {
+  background-color: #42b983;
+  color: white;
+  font-weight: bold;
+  font-size: 14px; /* 增大表头字体大小 */
+}
+
+.temperature-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.temperature-table tr:hover {
+  background-color: #f0f8ff;
 }
 
 .data-table {
