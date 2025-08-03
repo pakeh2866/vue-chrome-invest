@@ -286,7 +286,12 @@
             </span>
             <span v-else>--</span>
           </td>
-          <td>--</td> <!-- 建议仓位：如需可后续补充 -->
+          <td>
+            <span v-if="item.relatedIndex">
+              {{ calculatePositionSuggestedPosition(item) }}
+            </span>
+            <span v-else>--</span>
+          </td>
           <td>
             <!-- 新增编辑按钮 -->
             <div style="display: flex; gap: 6px;">
@@ -2381,6 +2386,33 @@ export default {
       if (!code) return '';
       const index = this.indexData.find(item => item.code === code);
       return index ? `${index.name} (${index.code})` : code;
+    },
+    // 计算持仓的建议仓位（关联指数的建议仓位 × 0.15）
+    calculatePositionSuggestedPosition(position) {
+      if (!position.relatedIndex) return '--';
+      
+      // 找到关联的指数数据
+      const relatedIndex = this.indexData.find(item => item.code === position.relatedIndex);
+      if (!relatedIndex) return '--';
+      
+      try {
+        // 获取关联指数的建议仓位
+        const indexSuggestedPositionStr = this.calculateSuggestedPosition(relatedIndex);
+        
+        // 去掉百分号并转换为数字
+        const indexSuggestedPosition = parseFloat(indexSuggestedPositionStr.replace('%', ''));
+        
+        if (isNaN(indexSuggestedPosition)) return '--';
+        
+        // 计算持仓建议仓位（关联指数的建议仓位 × 0.15）
+        const positionSuggestedPosition = indexSuggestedPosition * 0.15;
+        
+        // 转换为百分比显示
+        return positionSuggestedPosition.toFixed(2) + '%';
+      } catch (error) {
+        console.error('计算持仓建议仓位时出错:', error);
+        return '--';
+      }
     }
   },
   mounted() {
