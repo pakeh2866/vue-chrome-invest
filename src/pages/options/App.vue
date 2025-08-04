@@ -179,7 +179,9 @@
             </span>
             <span v-else>--</span>
           </td>
-          <td style="cursor: pointer; text-decoration: underline;" @click="showSuggestedPositionModal(item)">
+          <td style="cursor: pointer; text-decoration: underline;"
+              :style="{ backgroundColor: getSuggestedPositionColor(item) }"
+              @click="showSuggestedPositionModal(item)">
             {{ calculateSuggestedPosition(item) }}
           </td>
           <td class="action-buttons">
@@ -2410,8 +2412,37 @@ export default {
         // 转换为百分比显示
         return positionSuggestedPosition.toFixed(2) + '%';
       } catch (error) {
-        console.error('计算持仓建议仓位时出错:', error);
-        return '--';
+       console.error('计算持仓建议仓位时出错:', error);
+       return '--';
+     }
+   }, // 根据建议仓位值返回颜色
+   getSuggestedPositionColor(item) {
+     try {
+        // 直接使用表格中显示的百分位值
+        const fiveYearPercentile = parseFloat(this.getFiveYearPercentile(item.currentPE, this.codeToPeKey(item.code))) || 0;
+        const tenYearPercentile = parseFloat(this.getTenYearPercentile(item.currentPE, this.codeToPeKey(item.code))) || 0;
+        const historyPercentile = parseFloat(this.getHistoryPercentileForDisplay(item)) || 0;
+        
+        // 计算综合百分位（加权平均）
+        const combinedPercentile = (fiveYearPercentile * 0.6) + (tenYearPercentile * 0.3) + (historyPercentile * 0.1);
+        
+        // 计算建议仓位（1 - 综合百分位）
+        const suggestedPosition = 1 - (combinedPercentile / 100);
+        
+        // 转换为百分比数值
+        const suggestedPositionPercent = suggestedPosition * 100;
+        
+        // 根据条件返回颜色
+        if (suggestedPositionPercent > 75) {
+          return '#90ee90'; // 绿色
+        } else if (suggestedPositionPercent < 25) {
+          return '#ff4d4f'; // 红色
+        } else {
+          return ''; // 无背景色
+        }
+      } catch (error) {
+        console.error('计算建议仓位颜色时出错:', error);
+        return ''; // 出错时无背景色
       }
     }
   },
@@ -2780,7 +2811,7 @@ export default {
   background-color: #42b983;
   color: white;
   font-weight: bold;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .data-table tr:nth-child(even) {
