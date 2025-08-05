@@ -262,8 +262,8 @@
             持仓比例
             <span v-if="positionSortByRatio">↓</span>
           </th>
-          <th>关联指数</th>
           <th>建议仓位</th>
+          <th>关联指数</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -284,13 +284,13 @@
           </td>
           <td>
             <span v-if="item.relatedIndex">
-              {{ getIndexNameByCode(item.relatedIndex) }}
+              {{ calculatePositionSuggestedPosition(item) }}
             </span>
             <span v-else>--</span>
           </td>
           <td>
             <span v-if="item.relatedIndex">
-              {{ calculatePositionSuggestedPosition(item) }}
+              {{ getIndexNameByCode(item.relatedIndex) }}
             </span>
             <span v-else>--</span>
           </td>
