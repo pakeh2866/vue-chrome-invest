@@ -1073,14 +1073,17 @@ export default {
       positions: [], // 新增：持仓数据数组
       categoryOptions: [
         {
-          label: '权益类',
-          children: [
-            { label: 'A股个股', value: 'A股个股' },
-            { label: 'A股ETF', value: 'A股ETF' },
-            { label: '港股ETF', value: '港股ETF' },
-            { label: '海外ETF', value: '海外ETF' }
-          ]
-        },
+                  label: '权益类',
+                  children: [
+                    { label: 'A股个股', value: 'A股个股' },
+                    { label: 'A股大盘ETF', value: 'A股大盘ETF' },
+                    { label: 'A股中小盘ETF', value: 'A股中小盘ETF' },
+                    { label: 'A股行业ETF', value: 'A股行业ETF' },
+                    { label: 'A股价值ETF', value: 'A股价值ETF' },
+                    { label: '港股ETF', value: '港股ETF' },
+                    { label: '海外ETF', value: '海外ETF' }
+                  ]
+                },
         {
           label: '债券类',
           children: [
