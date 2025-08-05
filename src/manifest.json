@@ -42,7 +42,7 @@
     },
     {
       "matches": [
-        "https://stock.cheesefortune.com/*"
+        "https://stock.cheesefortune.com/pepChat*"
       ],
       "js": [
         "js/content_cheesefortune.js"
