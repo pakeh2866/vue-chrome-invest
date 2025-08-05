@@ -1636,6 +1636,9 @@ export default {
         if (code === 'hkHSI') {
           return 'HSI.HI';
         }
+        if (code === 'hkHSTECH') {
+          return 'HSTECH.HI';
+        }
         return code.slice(2).toUpperCase() + '.HK';
       }
       return code.toUpperCase();
