@@ -2731,8 +2731,9 @@ export default {
       
       return ratios;
     },
-    // 过滤掉"现金-现金"的小类分布
+    // 过滤掉"现金-现金"的小类分布，并按categoryOptions定义的顺序排序
     filteredSubCategoryRatios() {
+      // 先过滤掉"现金-现金"
       const filtered = {};
       Object.keys(this.subCategoryRatios).forEach(key => {
         // 过滤掉"现金-现金"
@@ -2740,7 +2741,49 @@ export default {
           filtered[key] = this.subCategoryRatios[key];
         }
       });
-      return filtered;
+    
+      // 创建一个映射，用于确定每个分类的顺序
+      const categoryOrder = {};
+      const subCategoryOrder = {};
+      
+      this.categoryOptions.forEach((category, categoryIndex) => {
+        categoryOrder[category.label] = categoryIndex;
+        if (category.children) {
+          category.children.forEach((subCategory, subCategoryIndex) => {
+            subCategoryOrder[`${category.label}-${subCategory.value}`] = subCategoryIndex;
+          });
+        }
+      });
+    
+      // 转换为数组并排序
+      const sortedEntries = Object.entries(filtered).sort(([keyA], [keyB]) => {
+        // 分离大类和小类
+        const [categoryA, subCategoryA = ''] = keyA.includes('-') ? keyA.split('-') : [keyA, ''];
+        const [categoryB, subCategoryB = ''] = keyB.includes('-') ? keyB.split('-') : [keyB, ''];
+        
+        // 获取大类的顺序
+        const orderA = categoryOrder[categoryA] !== undefined ? categoryOrder[categoryA] : Infinity;
+        const orderB = categoryOrder[categoryB] !== undefined ? categoryOrder[categoryB] : Infinity;
+        
+        // 如果大类不同，按大类排序
+        if (orderA !== orderB) {
+          return orderA - orderB;
+        }
+        
+        // 如果大类相同，按小类排序
+        const subOrderA = subCategoryOrder[keyA] !== undefined ? subCategoryOrder[keyA] : Infinity;
+        const subOrderB = subCategoryOrder[keyB] !== undefined ? subCategoryOrder[keyB] : Infinity;
+        
+        return subOrderA - subOrderB;
+      });
+    
+      // 转换回对象
+      const sortedObject = {};
+      sortedEntries.forEach(([key, value]) => {
+        sortedObject[key] = value;
+      });
+    
+      return sortedObject;
     },
     // 计算权益类中A股ETF和A股个股的合计比例
     equityAStockRatio() {
