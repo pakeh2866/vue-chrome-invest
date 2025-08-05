@@ -238,7 +238,7 @@
             <div v-if="equityAStockRatio"
                  style="margin-bottom: 3px; margin-left: 10px; color: #666; font-weight: bold;"
                  :style="shouldHighlightEquityAStock ? { backgroundColor: 'red', color: 'white', padding: '0 4px', borderRadius: '2px' } : {}">
-              权益类-A股: {{ equityAStockRatio }}%
+              权益类-A股: {{ equityAStockRatio }}% ({{ (parseFloat(suggestedPositionAH.replace('%', '')) - parseFloat(equityAStockRatio)).toFixed(2) }})
             </div>
           </div>
         </div>
