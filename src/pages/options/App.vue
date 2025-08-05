@@ -276,7 +276,7 @@
           <td>{{ item.price }}</td>
           <td>{{ item.category === '现金' ? 1 : (item.currentPrice || '--') }}</td> <!-- 现价：现金固定为1 -->
           <td>{{ (item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))).toFixed(2) }}</td> <!-- 持仓价值：现金现价为1 -->
-          <td>
+          <td :style="getPositionRatioStyle(item)">
             <span v-if="totalPositionValue > 0">
               {{ ((item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0))) / totalPositionValue * 100).toFixed(2) }}%
             </span>
@@ -2450,6 +2450,26 @@ export default {
         console.error('计算建议仓位颜色时出错:', error);
         return ''; // 出错时无背景色
       }
+    },
+    // 判断持仓比例单元格是否需要标黄
+    getPositionRatioStyle(item) {
+      if (this.totalPositionValue <= 0) return {};
+      
+      // 计算持仓比例
+      const positionValue = item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0));
+      const ratio = (positionValue / this.totalPositionValue) * 100;
+      
+      // 条件1: 如果对应分类为A股个股的比例大于4%时，标黄
+      if (item.subCategory === 'A股个股' && ratio > 4) {
+        return { backgroundColor: '#faad14', color: 'black' };
+      }
+      
+      // 条件2: 如果对应分类为权益类且不是A股个股，比例大于15%时，标黄
+      if (item.category === '权益类' && item.subCategory !== 'A股个股' && ratio > 15) {
+        return { backgroundColor: '#faad14', color: 'black' };
+      }
+      
+      return {};
     }
   },
   mounted() {
