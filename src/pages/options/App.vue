@@ -2459,14 +2459,42 @@ export default {
       const positionValue = item.amount * (item.category === '现金' ? 1 : (item.currentPrice || 0));
       const ratio = (positionValue / this.totalPositionValue) * 100;
       
-      // 条件1: 如果对应分类为A股个股的比例大于4%时，标黄
+      // 检查是否满足仓位限制条件
+      let exceedsPositionLimit = false;
+      // 条件1: 如果对应分类为A股个股的比例大于4%时
       if (item.subCategory === 'A股个股' && ratio > 4) {
-        return { backgroundColor: '#faad14', color: 'black' };
+        exceedsPositionLimit = true;
+      }
+      // 条件2: 如果对应分类为权益类且不是A股个股，比例大于15%时
+      if (item.category === '权益类' && item.subCategory !== 'A股个股' && ratio > 15) {
+        exceedsPositionLimit = true;
       }
       
-      // 条件2: 如果对应分类为权益类且不是A股个股，比例大于15%时，标黄
-      if (item.category === '权益类' && item.subCategory !== 'A股个股' && ratio > 15) {
-        return { backgroundColor: '#faad14', color: 'black' };
+      // 检查是否满足建议仓位与实际比例相差4%以上
+      let exceedsSuggestedDiff = false;
+      if (item.relatedIndex) {
+        const suggestedPositionStr = this.calculatePositionSuggestedPosition(item);
+        if (suggestedPositionStr !== '--') {
+          const suggestedPosition = parseFloat(suggestedPositionStr.replace('%', ''));
+          if (!isNaN(suggestedPosition)) {
+            const diff = Math.abs(ratio - suggestedPosition);
+            if (diff >= 4) {
+              exceedsSuggestedDiff = true;
+            }
+          }
+        }
+      }
+      
+      // 根据条件组合返回不同颜色
+      if (exceedsPositionLimit && exceedsSuggestedDiff) {
+        // 同时满足两个条件，使用浅红色表示最严重的情况
+        return { backgroundColor: '#ff7875', color: 'white' };
+      } else if (exceedsPositionLimit) {
+        // 只满足仓位限制条件，使用橙色
+        return { backgroundColor: '#ffa940', color: 'black' };
+      } else if (exceedsSuggestedDiff) {
+        // 只满足建议仓位差异条件，使用浅黄色
+        return { backgroundColor: '#fff7e6', color: 'black' };
       }
       
       return {};
