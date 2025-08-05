@@ -248,7 +248,7 @@
         <button @click="updateMarket" style="margin-left: 10px;">更新行情</button>
       </div>
     </div>
-    <table class="data-table">
+    <table class="hold-table">
       <thead>
         <tr>
           <th>分类</th>
@@ -2926,6 +2926,43 @@ export default {
 
 .data-table tr:hover {
   background-color: #f0f8ff;
+}
+
+.hold-table {
+  width: 100%;
+  max-width: 1200px;
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.hold-table th,
+.hold-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.hold-table th {
+  background-color: #42b983;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.hold-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.hold-table tr:hover {
+  background-color: #f0f8ff;
+}
+
+.hold-table td:first-child {
+  font-weight: bold;
 }
 
 .highlight {
