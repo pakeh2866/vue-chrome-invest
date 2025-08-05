@@ -236,9 +236,9 @@
               {{ subCategory }}: {{ ratio }}%
             </div>
             <div v-if="equityAStockRatio"
-                 style="margin-bottom: 3px; margin-left: 10px; color: #666;"
+                 style="margin-bottom: 3px; margin-left: 10px; color: #666; font-weight: bold;"
                  :style="shouldHighlightEquityAStock ? { backgroundColor: 'red', color: 'white', padding: '0 4px', borderRadius: '2px' } : {}">
-              权益类-A股ETF+A股个股: {{ equityAStockRatio }}%
+              权益类-A股: {{ equityAStockRatio }}%
             </div>
           </div>
         </div>
@@ -2785,11 +2785,20 @@ export default {
     
       return sortedObject;
     },
-    // 计算权益类中A股ETF和A股个股的合计比例
+    // 计算权益类中A股的合计比例
     equityAStockRatio() {
-      const aStockETF = parseFloat(this.subCategoryRatios['权益类-A股ETF']) || 0;
+      // 计算以下几类的合计比例：
+      // 权益类-A股个股
+      // 权益类-A股大盘ETF
+      // 权益类-A股中小盘ETF
+      // 权益类-A股行业ETF
+      // 权益类-A股价值ETF
       const aStock = parseFloat(this.subCategoryRatios['权益类-A股个股']) || 0;
-      return (aStockETF + aStock).toFixed(2);
+      const aStockLargeETF = parseFloat(this.subCategoryRatios['权益类-A股大盘ETF']) || 0;
+      const aStockSmallMediumETF = parseFloat(this.subCategoryRatios['权益类-A股中小盘ETF']) || 0;
+      const aStockSectorETF = parseFloat(this.subCategoryRatios['权益类-A股行业ETF']) || 0;
+      const aStockValueETF = parseFloat(this.subCategoryRatios['权益类-A股价值ETF']) || 0;
+      return (aStock + aStockLargeETF + aStockSmallMediumETF + aStockSectorETF + aStockValueETF).toFixed(2);
     },
     // 判断权益类-A股ETF+A股个股比例与建议仓位差距是否大于10%
     shouldHighlightEquityAStock() {
