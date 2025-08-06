@@ -46,6 +46,7 @@
     <table class="data-table">
       <thead>
         <tr>
+          <th style="width: 30px;">排序</th>
           <th>指数名称</th>
           <th>代码</th>
           <th>现指数点位</th>
@@ -63,8 +64,8 @@
           <th>压力位</th>
           <th>TX市盈率</th>
           <th>五年平均值</th>
-          <th>五年百分位</th>
           <th>十年平均值</th>
+          <th>五年百分位</th>
           <th>十年百分位</th>
           <th>历史百分位</th>
           <th>zs市盈率</th>
@@ -74,7 +75,21 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(item, index) in indexData" :key="index">
+        <tr
+          v-for="(item, index) in indexData"
+          :key="index"
+          draggable="true"
+          @dragstart="handleDragStart($event, index)"
+          @dragover="handleDragOver($event, index)"
+          @dragenter="handleDragEnter($event, index)"
+          @dragleave="handleDragLeave($event, index)"
+          @drop="handleDrop($event, index)"
+          @dragend="handleDragEnd($event, index)"
+          :class="{ 'dragging': isDragging && draggedIndex === index, 'drag-over': dragOverIndex === index }"
+        >
+          <td style="text-align: center; cursor: move;">
+            <span style="color: #999;">≡</span>
+          </td>
           <td>{{ item.name }}</td>
           <td>{{ item.code }}</td>
           <td :style="{ backgroundColor: getIndexColor(item), color: (getIndexColor(item) === '#006400' || getIndexColor(item) === '#ff4d4f') ? '#fff' : '#000' }">
@@ -131,17 +146,17 @@
             </span>
             <span v-else>--</span>
           </td>
+          <td style="cursor: pointer; text-decoration: underline;" @click="showTenYearAverageModal(item)">
+            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
+              {{ getTenYearAverage(codeToPeKey(item.code)) }}
+            </span>
+            <span v-else>--</span>
+          </td>
           <td style="cursor: pointer; text-decoration: underline;"
               :style="{ backgroundColor: getFiveYearPercentileColor(item) }"
               @click="showFiveYearPercentileModal(item)">
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getFiveYearPercentile(item.currentPE, codeToPeKey(item.code)) }}%
-            </span>
-            <span v-else>--</span>
-          </td>
-          <td style="cursor: pointer; text-decoration: underline;" @click="showTenYearAverageModal(item)">
-            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
-              {{ getTenYearAverage(codeToPeKey(item.code)) }}
             </span>
             <span v-else>--</span>
           </td>
@@ -933,6 +948,10 @@ export default {
       showAddIndexModal: false,
       isEditing: false,
       currentEditIndex: -1,
+      // 拖拽排序相关状态
+      isDragging: false,
+      draggedIndex: -1,
+      dragOverIndex: -1,
       // 添加提示框相关数据
       tooltip: {
         show: false,
@@ -1143,6 +1162,67 @@ export default {
     }
   },
   methods: {
+    // 拖拽排序相关方法
+    handleDragStart(event, index) {
+      this.isDragging = true;
+      this.draggedIndex = index;
+      event.dataTransfer.effectAllowed = 'move';
+      // 设置拖拽效果
+      event.dataTransfer.setData('text/html', event.target.innerHTML);
+      // 添加拖拽样式
+      event.target.classList.add('dragging');
+    },
+    
+    handleDragOver(event, index) {
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+      event.dataTransfer.dropEffect = 'move';
+      return false;
+    },
+    
+    handleDragEnter(event, index) {
+      this.dragOverIndex = index;
+    },
+    
+    handleDragLeave(event, index) {
+      if (this.dragOverIndex === index) {
+        this.dragOverIndex = -1;
+      }
+    },
+    
+    handleDrop(event, index) {
+      if (event.stopPropagation) {
+        event.stopPropagation();
+      }
+      
+      if (this.draggedIndex !== index) {
+        // 重新排序数组
+        const draggedItem = this.indexData[this.draggedIndex];
+        this.indexData.splice(this.draggedIndex, 1);
+        this.indexData.splice(index, 0, draggedItem);
+        
+        // 保存排序后的数据到本地存储
+        chrome.storage.local.set({ 'indexData': this.indexData }, () => {
+          console.log('指数数据排序已更新');
+        });
+      }
+      
+      return false;
+    },
+    
+    handleDragEnd(event, index) {
+      this.isDragging = false;
+      this.draggedIndex = -1;
+      this.dragOverIndex = -1;
+      
+      // 移除所有拖拽样式
+      const rows = document.querySelectorAll('.data-table tr');
+      rows.forEach(row => {
+        row.classList.remove('dragging');
+      });
+    },
+
     // 编辑指数，弹出编辑模态框并填充数据
     editIndex(index) {
       const item = this.indexData[index];
@@ -3073,6 +3153,17 @@ export default {
     z-index: 9999;
     pointer-events: none; /* 防止提示框干扰鼠标事件 */
     white-space: nowrap;
+  }
+  
+  /* 拖拽排序相关样式 */
+  .dragging {
+    opacity: 0.5;
+    cursor: move;
+  }
+  
+  .drag-over {
+    background-color: #f0f8ff !important;
+    border-top: 2px solid #42b983;
   }
 </style>
 
