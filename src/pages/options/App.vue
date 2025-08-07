@@ -2768,43 +2768,60 @@ export default {
     document.head.appendChild(script);
   },
   computed: {
+    // 缓存温度数据有效性检查
+    isTemperatureDataValid() {
+      return this.temperatureData &&
+             this.temperatureData.length >= 2 &&
+             this.temperatureData[0] &&
+             this.temperatureData[1];
+    },
+    
+    // 缓存温度数据解析
+    parsedTemperatureData() {
+      if (!this.isTemperatureDataValid) {
+        return { youzhiyouxingTemp: NaN, haomaiTemp: NaN };
+      }
+      
+      const youzhiyouxingTemp = parseFloat(this.temperatureData[0].temperature);
+      const haomaiTemp = parseFloat(this.temperatureData[1].temperature);
+      
+      return { youzhiyouxingTemp, haomaiTemp };
+    },
+    
+    // 缓存温度数据是否有效
+    isTemperatureValuesValid() {
+      const { youzhiyouxingTemp, haomaiTemp } = this.parsedTemperatureData;
+      return !isNaN(youzhiyouxingTemp) && !isNaN(haomaiTemp);
+    },
+    
+    // 缓存平均温度计算
+    averageTemperature() {
+      if (!this.isTemperatureValuesValid) {
+        return NaN;
+      }
+      
+      const { youzhiyouxingTemp, haomaiTemp } = this.parsedTemperatureData;
+      return (youzhiyouxingTemp + haomaiTemp) / 2;
+    },
+    
+    // 优化后的建议A股仓位计算
     suggestedPositionAH() {
       try {
-        // 检查数据是否已加载
-        if (!this.temperatureData || this.temperatureData.length < 2) {
-          console.log('温度数据尚未加载');
+        if (!this.isTemperatureDataValid) {
           return 'N/A';
         }
         
-        // 获取有知有行数据和好买温度
-        const youzhiyouxingData = this.temperatureData[0]; // 有知有行数据
-        const haomaiData = this.temperatureData[1]; // 好买温度
-        
-        // 检查数据对象是否存在
-        if (!youzhiyouxingData || !haomaiData) {
-          console.log('温度数据对象不存在');
+        if (!this.isTemperatureValuesValid) {
           return 'N/A';
         }
         
-        // 获取今日温度值
-        const youzhiyouxingTemp = parseFloat(youzhiyouxingData.temperature);
-        const haomaiTemp = parseFloat(haomaiData.temperature);
-        
-        // 调试信息
-        console.log('有知有行温度:', youzhiyouxingData.temperature, '转换后:', youzhiyouxingTemp);
-        console.log('好买温度:', haomaiData.temperature, '转换后:', haomaiTemp);
-        
-        // 检查数据是否有效
-        if (isNaN(youzhiyouxingTemp) || isNaN(haomaiTemp)) {
-          console.log('温度数据无效，返回N/A');
+        const avgTemp = this.averageTemperature;
+        if (isNaN(avgTemp)) {
           return 'N/A';
         }
-        
-        // 计算平均温度
-        const avgTemperature = (youzhiyouxingTemp + haomaiTemp) / 2;
         
         // 使用温度-仓位对照表进行线性插值计算
-        const suggestedPosition = this.calculatePositionFromTable(avgTemperature);
+        const suggestedPosition = this.calculatePositionFromTable(avgTemp);
         
         // 转换为百分比显示
         return suggestedPosition.toFixed(0) + '%';
@@ -2813,64 +2830,78 @@ export default {
         return 'N/A';
       }
     },
-    // 计算各大类持仓比例
+    
+    // 缓存持仓价值计算
+    positionValues() {
+      const values = {};
+      
+      // 计算各大类持仓价值
+      this.positions.forEach(position => {
+        const value = position.amount * (position.category === '现金' ? 1 : (position.currentPrice || 0));
+        
+        // 大类价值
+        if (!values[position.category]) {
+          values[position.category] = 0;
+        }
+        values[position.category] += value;
+        
+        // 小类价值
+        const subKey = position.subCategory ? `${position.category}-${position.subCategory}` : position.category;
+        if (!values[subKey]) {
+          values[subKey] = 0;
+        }
+        values[subKey] += value;
+      });
+      
+      return values;
+    },
+    
+    // 优化后的各大类持仓比例计算
     categoryRatios() {
       const ratios = {};
+      
       // 初始化各大类
       this.categoryOptions.forEach(category => {
         ratios[category.label] = 0;
       });
       
-      // 计算各大类持仓价值
-      this.positions.forEach(position => {
-        const value = position.amount * (position.category === '现金' ? 1 : (position.currentPrice || 0));
-        if (ratios.hasOwnProperty(position.category)) {
-          ratios[position.category] += value;
+      // 从缓存中获取价值数据
+      Object.keys(this.positionValues).forEach(key => {
+        // 只处理大类（不包含"-"的key）
+        if (!key.includes('-') && ratios.hasOwnProperty(key)) {
+          ratios[key] = this.positionValues[key];
         }
       });
       
       // 转换为百分比
       Object.keys(ratios).forEach(key => {
-        ratios[key] = this.totalPositionValue > 0 ? ((ratios[key] / this.totalPositionValue) * 100).toFixed(2) : '0.00';
+        ratios[key] = this.totalPositionValue > 0 ?
+          ((ratios[key] / this.totalPositionValue) * 100).toFixed(2) : '0.00';
       });
       
       return ratios;
     },
-    // 计算各小类持仓比例
+    
+    // 优化后的各小类持仓比例计算
     subCategoryRatios() {
       const ratios = {};
       
-      // 计算各小类持仓价值
-      this.positions.forEach(position => {
-        // 构造key，格式为"大类-小类"
-        const key = position.subCategory ? `${position.category}-${position.subCategory}` : position.category;
-        const value = position.amount * (position.category === '现金' ? 1 : (position.currentPrice || 0));
-        if (ratios.hasOwnProperty(key)) {
-          ratios[key] += value;
-        } else {
-          ratios[key] = value;
-        }
+      // 从缓存中获取价值数据
+      Object.keys(this.positionValues).forEach(key => {
+        ratios[key] = this.positionValues[key];
       });
       
       // 转换为百分比
       Object.keys(ratios).forEach(key => {
-        ratios[key] = this.totalPositionValue > 0 ? ((ratios[key] / this.totalPositionValue) * 100).toFixed(2) : '0.00';
+        ratios[key] = this.totalPositionValue > 0 ?
+          ((ratios[key] / this.totalPositionValue) * 100).toFixed(2) : '0.00';
       });
       
       return ratios;
     },
-    // 过滤掉"现金-现金"的小类分布，并按categoryOptions定义的顺序排序
-    filteredSubCategoryRatios() {
-      // 先过滤掉"现金-现金"
-      const filtered = {};
-      Object.keys(this.subCategoryRatios).forEach(key => {
-        // 过滤掉"现金-现金"
-        if (key !== '现金-现金') {
-          filtered[key] = this.subCategoryRatios[key];
-        }
-      });
     
-      // 创建一个映射，用于确定每个分类的顺序
+    // 缓存分类顺序映射
+    categoryOrderMap() {
       const categoryOrder = {};
       const subCategoryOrder = {};
       
@@ -2882,7 +2913,23 @@ export default {
           });
         }
       });
+      
+      return { categoryOrder, subCategoryOrder };
+    },
     
+    // 优化后的过滤和排序小类持仓比例
+    filteredSubCategoryRatios() {
+      // 先过滤掉"现金-现金"
+      const filtered = {};
+      Object.keys(this.subCategoryRatios).forEach(key => {
+        if (key !== '现金-现金') {
+          filtered[key] = this.subCategoryRatios[key];
+        }
+      });
+      
+      // 使用缓存的顺序映射
+      const { categoryOrder, subCategoryOrder } = this.categoryOrderMap;
+      
       // 转换为数组并排序
       const sortedEntries = Object.entries(filtered).sort(([keyA], [keyB]) => {
         // 分离大类和小类
@@ -2904,34 +2951,37 @@ export default {
         
         return subOrderA - subOrderB;
       });
-    
+      
       // 转换回对象
       const sortedObject = {};
       sortedEntries.forEach(([key, value]) => {
         sortedObject[key] = value;
       });
-    
+      
       return sortedObject;
     },
-    // 计算权益类中A股的合计比例
+    
+    // 优化后的权益类中A股的合计比例计算
     equityAStockRatio() {
-      // 计算以下几类的合计比例：
-      // 权益类-A股个股
-      // 权益类-A股大盘ETF
-      // 权益类-A股中小盘ETF
-      // 权益类-A股行业ETF
-      // 权益类-A股价值ETF
+      // 从缓存中获取小类比例，避免重复计算
       const aStock = parseFloat(this.subCategoryRatios['权益类-A股个股']) || 0;
       const aStockLargeETF = parseFloat(this.subCategoryRatios['权益类-A股大盘ETF']) || 0;
       const aStockSmallMediumETF = parseFloat(this.subCategoryRatios['权益类-A股中小盘ETF']) || 0;
       const aStockSectorETF = parseFloat(this.subCategoryRatios['权益类-A股行业ETF']) || 0;
       const aStockValueETF = parseFloat(this.subCategoryRatios['权益类-A股价值ETF']) || 0;
+      
       return (aStock + aStockLargeETF + aStockSmallMediumETF + aStockSectorETF + aStockValueETF).toFixed(2);
     },
-    // 判断权益类-A股ETF+A股个股比例与建议仓位差距是否大于10%
+    
+    // 优化后的判断权益类-A股ETF+A股个股比例与建议仓位差距是否大于10%
     shouldHighlightEquityAStock() {
       const equityAStockRatio = parseFloat(this.equityAStockRatio) || 0;
-      const suggestedPosition = parseFloat(this.suggestedPositionAH.replace('%', '')) || 0;
+      
+      // 缓存建议仓位解析，避免重复解析字符串
+      const suggestedPositionStr = this.suggestedPositionAH;
+      const suggestedPosition = suggestedPositionStr !== 'N/A' ?
+        parseFloat(suggestedPositionStr.replace('%', '')) || 0 : 0;
+      
       const diff = Math.abs(equityAStockRatio - suggestedPosition);
       return diff > 10;
     }
