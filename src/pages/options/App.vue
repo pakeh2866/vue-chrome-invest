@@ -78,7 +78,7 @@
         <tr
           v-for="(item, index) in indexData"
           :key="index"
-          draggable="true"
+          :draggable="isDragging && draggedIndex === index"
           @dragstart="handleDragStart($event, index)"
           @dragover="handleDragOver($event, index)"
           @dragenter="handleDragEnter($event, index)"
@@ -87,7 +87,7 @@
           @dragend="handleDragEnd($event, index)"
           :class="{ 'dragging': isDragging && draggedIndex === index, 'drag-over': dragOverIndex === index }"
         >
-          <td style="text-align: center; cursor: move;">
+          <td style="text-align: center; cursor: move;" draggable="true" @dragstart="handleDragStartFromCell($event, index)">
             <span style="color: #999;">≡</span>
           </td>
           <td>{{ item.name }}</td>
@@ -1165,21 +1165,37 @@ export default {
   },
   methods: {
     // 拖拽排序相关方法
-    handleDragStart(event, index) {
+    handleDragStartFromCell(event, index) {
       this.isDragging = true;
       this.draggedIndex = index;
       event.dataTransfer.effectAllowed = 'move';
       // 设置拖拽效果
       event.dataTransfer.setData('text/html', event.target.innerHTML);
       // 添加拖拽样式
-      event.target.classList.add('dragging');
+      event.target.closest('tr').classList.add('dragging');
+      event.stopPropagation(); // 阻止事件冒泡
+    },
+
+    handleDragStart(event, index) {
+      // 只有当拖拽是从第一列开始时才处理
+      if (this.isDragging && this.draggedIndex === index) {
+        return; // 如果已经通过第一列的拖拽开始，这里不做任何操作
+      }
+      this.isDragging = false;
+      this.draggedIndex = -1;
+      event.preventDefault(); // 阻止非第一列的拖拽
     },
     
     handleDragOver(event, index) {
       if (event.preventDefault) {
         event.preventDefault();
       }
-      event.dataTransfer.dropEffect = 'move';
+      // 只有在拖拽状态时才允许拖放
+      if (this.isDragging) {
+        event.dataTransfer.dropEffect = 'move';
+      } else {
+        event.dataTransfer.dropEffect = 'none';
+      }
       return false;
     },
     
@@ -1198,7 +1214,8 @@ export default {
         event.stopPropagation();
       }
       
-      if (this.draggedIndex !== index) {
+      // 只有在拖拽状态时才允许拖放
+      if (this.isDragging && this.draggedIndex !== index) {
         // 重新排序数组
         const draggedItem = this.indexData[this.draggedIndex];
         this.indexData.splice(this.draggedIndex, 1);
