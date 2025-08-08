@@ -2847,7 +2847,7 @@ export default {
         const suggestedPosition = this.calculatePositionFromTable(avgTemp);
         
         // 转换为百分比显示
-        return suggestedPosition.toFixed(0) + '%';
+        return suggestedPosition.toFixed(1) + '%';
       } catch (error) {
         console.error('计算建议仓位时出错:', error);
         return 'N/A';
