@@ -1,15 +1,15 @@
 <template>
-  <button @click="fetchData">获取数据</button>
-  <button @click="exportData" style="margin-left: 10px;">导出数据</button>
+  <button @click="fetchData"><span v-once>获取数据</span></button>
+  <button @click="exportData" style="margin-left: 10px;"><span v-once>导出数据</span></button>
   <input type="file" ref="importFile" style="display:none" @change="importData" accept=".json" />
-  <button @click="triggerImport" style="margin-left: 10px;">导入数据</button>
+  <button @click="triggerImport" style="margin-left: 10px;"><span v-once>导入数据</span></button>
   <h2>
     整体温度数据
     <span v-if="haomaiDate" style="font-size:14px;color:#888;margin-left:10px;">
       ({{ haomaiDate }})
     </span>
     <span style="font-size:14px;color:#888;margin-left:10px;cursor:pointer;text-decoration:underline;" @click="openPositionLogicModal">
-     建议A股仓位：{{ suggestedPositionAH }}
+     <span v-once>建议A股仓位：</span>{{ suggestedPositionAH }}
    </span>
   </h2>
   <table class="temperature-table">
@@ -40,8 +40,8 @@
   </table>
     <div style="display: flex; align-items: center; gap: 10px;">
         <h2 style="margin-right: 10px;">指数参考</h2>
-        <button @click="addIndex">新增指数</button>
-        <button @click="fetchZsData" style="margin-left: 10px;">一键zs数据</button>
+        <button @click="addIndex"><span v-once>新增指数</span></button>
+        <button @click="fetchZsData" style="margin-left: 10px;"><span v-once>一键zs数据</span></button>
       </div>
     <table class="data-table">
       <thead>
@@ -200,9 +200,9 @@
             {{ calculateSuggestedPosition(item) }}
           </td>
           <td class="action-buttons">
-            <button @click="onCheeseDataClick(item)">芝士</button>
-            <button @click="editIndex(index)">编辑</button>
-            <button @click="deleteIndex(index)">删除</button>
+            <button @click="onCheeseDataClick(item)"><span v-once>芝士</span></button>
+            <button @click="editIndex(index)"><span v-once>编辑</span></button>
+            <button @click="deleteIndex(index)"><span v-once>删除</span></button>
           </td>
         </tr>
       </tbody>
@@ -259,8 +259,8 @@
         </div>
       </div>
       <div style="margin-left: auto; display: flex; gap: 10px;">
-        <button @click="showAddPositionModal = true">增加持仓</button>
-        <button @click="updateMarket" style="margin-left: 10px;">更新行情</button>
+        <button @click="showAddPositionModal = true"><span v-once>增加持仓</span></button>
+        <button @click="updateMarket" style="margin-left: 10px;"><span v-once>更新行情</span></button>
       </div>
     </div>
     <table class="hold-table">
@@ -312,8 +312,8 @@
           <td>
             <!-- 新增编辑按钮 -->
             <div style="display: flex; gap: 6px;">
-              <button @click="editPosition(idx)">编辑</button>
-              <button @click="deletePosition(idx)">删除</button>
+              <button @click="editPosition(idx)"><span v-once>编辑</span></button>
+              <button @click="deletePosition(idx)"><span v-once>删除</span></button>
             </div>
           </td>
         </tr>
@@ -383,7 +383,7 @@
           </div>
         </div>
         <div class="modal-buttons">
-          <button @click="cancelAddIndex" class="cancel-btn">取消</button>
+          <button @click="cancelAddIndex" class="cancel-btn"><span v-once>取消</span></button>
           <button @click="saveIndex" class="save-btn">{{ isEditing ? '更新' : '保存' }}</button>
         </div>
       </div>
@@ -433,8 +433,8 @@
           </div>
         </div>
         <div class="modal-buttons">
-          <button @click="showAddPositionModal = false" class="cancel-btn">取消</button>
-          <button @click="savePosition" class="save-btn">保存</button>
+          <button @click="showAddPositionModal = false" class="cancel-btn"><span v-once>取消</span></button>
+          <button @click="savePosition" class="save-btn"><span v-once>保存</span></button>
         </div>
       </div>
     </div>
@@ -468,7 +468,7 @@
           <button @click="showTemperaturePositionModal = true" style="background-color: #42b983; color: white; border: none; padding: 8px 16px; cursor: pointer; margin-top: 10px;">编辑对照表</button>
         </div>
         <div class="modal-buttons">
-          <button @click="closePositionLogicModal" class="save-btn">关闭</button>
+          <button @click="closePositionLogicModal" class="save-btn"><span v-once>关闭</span></button>
         </div>
       </div>
     </div>
@@ -497,17 +497,17 @@
                 <input v-model.number="item.position" type="number" min="0" max="100" style="width: 60px;" />
               </td>
               <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">
-                <button @click="deleteTemperaturePositionRow(index)" style="background-color: #ff4d4f; color: white; border: none; padding: 4px 8px; cursor: pointer;">删除</button>
+                <button @click="deleteTemperaturePositionRow(index)" style="background-color: #ff4d4f; color: white; border: none; padding: 4px 8px; cursor: pointer;"><span v-once>删除</span></button>
               </td>
             </tr>
           </tbody>
         </table>
         <div style="margin-bottom: 15px;">
-          <button @click="addTemperaturePositionRow" style="background-color: #42b983; color: white; border: none; padding: 8px 16px; cursor: pointer;">添加行</button>
+          <button @click="addTemperaturePositionRow" style="background-color: #42b983; color: white; border: none; padding: 8px 16px; cursor: pointer;"><span v-once>添加行</span></button>
         </div>
         <div class="modal-buttons">
-          <button @click="showTemperaturePositionModal = false" class="cancel-btn">取消</button>
-          <button @click="saveTemperaturePositionTable" class="save-btn">保存</button>
+          <button @click="showTemperaturePositionModal = false" class="cancel-btn"><span v-once>取消</span></button>
+          <button @click="saveTemperaturePositionTable" class="save-btn"><span v-once>保存</span></button>
         </div>
       </div>
     </div>
@@ -556,7 +556,7 @@
         </table>
       </div>
       <div class="modal-buttons">
-        <button @click="tenYearAverageModal.show = false" class="save-btn">关闭</button>
+        <button @click="tenYearAverageModal.show = false" class="save-btn"><span v-once>关闭</span></button>
       </div>
     </div>
   </div>
@@ -596,7 +596,7 @@
         </table>
       </div>
       <div class="modal-buttons">
-        <button @click="fiveYearAverageModal.show = false" class="save-btn">关闭</button>
+        <button @click="fiveYearAverageModal.show = false" class="save-btn"><span v-once>关闭</span></button>
       </div>
     </div>
   </div>
@@ -690,7 +690,7 @@
         </table>
       </div>
       <div class="modal-buttons">
-        <button @click="fiveYearPercentileModal.show = false" class="save-btn">关闭</button>
+        <button @click="fiveYearPercentileModal.show = false" class="save-btn"><span v-once>关闭</span></button>
       </div>
     </div>
   </div>
@@ -784,7 +784,7 @@
         </table>
       </div>
       <div class="modal-buttons">
-        <button @click="tenYearPercentileModal.show = false" class="save-btn">关闭</button>
+        <button @click="tenYearPercentileModal.show = false" class="save-btn"><span v-once>关闭</span></button>
       </div>
     </div>
   </div>
@@ -801,72 +801,72 @@
           <p style="color: #856404; margin: 5px 0 0 0;">TX市盈率：{{ historyPercentileModal.originalPE }}，zs市盈率：{{ historyPercentileModal.zsPE }}</p>
         </div>
         <br>
-        <p><strong>计算逻辑：</strong></p>
-        <p>1. 获取所有历史市盈率数据</p>
-        <p>2. 过滤出有效数据（去除无效日期和PE值）</p>
-        <p>3. 计算当前PE值在历史数据中的百分位位置</p>
+        <p v-once><strong>计算逻辑：</strong></p>
+        <p v-once>1. 获取所有历史市盈率数据</p>
+        <p v-once>2. 过滤出有效数据（去除无效日期和PE值）</p>
+        <p v-once>3. 计算当前PE值在历史数据中的百分位位置</p>
         <br>
-        <p><strong>计算过程：</strong></p>
+        <p v-once><strong>计算过程：</strong></p>
         <p>• 数据时间范围：{{ historyPercentileModal.calculationDetails.startDate }} 至 {{ historyPercentileModal.calculationDetails.endDate }}</p>
         <p>• 有效数据数量：{{ historyPercentileModal.calculationDetails.dataCount }}</p>
         <p>• 当前PE值：{{ historyPercentileModal.currentPE }}</p>
         <p>• 历史数据中小于当前PE值的数量：{{ historyPercentileModal.calculationDetails.lowerCount }}</p>
         <p>• 百分位计算：({{ historyPercentileModal.calculationDetails.lowerCount }} ÷ {{ historyPercentileModal.calculationDetails.dataCount }}) × 100 = {{ historyPercentileModal.percentile }}%</p>
         <br>
-        <p><strong>不同百分位的PE值：</strong></p>
+        <p v-once><strong>不同百分位的PE值：</strong></p>
         <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
           <thead>
             <tr>
-              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">百分位</th>
-              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
-              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">说明</th>
+              <th v-once style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">百分位</th>
+              <th v-once style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+              <th v-once style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">说明</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;">0% (最小值)</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">0% (最小值)</td>
               <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['0'] || 'N/A' }}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">历史最低PE值</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">历史最低PE值</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;">10%</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">10%</td>
               <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['10'] || 'N/A' }}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">历史中10%的时间PE值低于此水平</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">历史中10%的时间PE值低于此水平</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;">25%</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">25%</td>
               <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['25'] || 'N/A' }}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">历史中25%的时间PE值低于此水平</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">历史中25%的时间PE值低于此水平</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;">50% (中位数)</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">50% (中位数)</td>
               <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['50'] || 'N/A' }}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">历史中50%的时间PE值低于此水平</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">历史中50%的时间PE值低于此水平</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;">75%</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">75%</td>
               <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['75'] || 'N/A' }}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">历史中75%的时间PE值低于此水平</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">历史中75%的时间PE值低于此水平</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;">90%</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">90%</td>
               <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['90'] || 'N/A' }}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">历史中90%的时间PE值低于此水平</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">历史中90%的时间PE值低于此水平</td>
             </tr>
             <tr>
-              <td style="border: 1px solid #ddd; padding: 8px;">100% (最大值)</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">100% (最大值)</td>
               <td style="border: 1px solid #ddd; padding: 8px;">{{ historyPercentileModal.calculationDetails.percentileValues['100'] || 'N/A' }}</td>
-              <td style="border: 1px solid #ddd; padding: 8px;">历史最高PE值</td>
+              <td v-once style="border: 1px solid #ddd; padding: 8px;">历史最高PE值</td>
             </tr>
           </tbody>
         </table>
         <br>
-        <p><strong>数据样本（随机10条，按日期排序）：</strong></p>
+        <p v-once><strong>数据样本（随机10条，按日期排序）：</strong></p>
         <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
           <thead>
             <tr>
-              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
-              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
+              <th v-once style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
+              <th v-once style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">PE值</th>
             </tr>
           </thead>
           <tbody>
@@ -878,7 +878,7 @@
         </table>
       </div>
       <div class="modal-buttons">
-        <button @click="historyPercentileModal.show = false" class="save-btn">关闭</button>
+        <button @click="historyPercentileModal.show = false" class="save-btn"><span v-once>关闭</span></button>
       </div>
     </div>
   </div>
@@ -888,42 +888,44 @@
     <div class="modal-content" style="width: 700px;" @click.stop>
       <h3>{{ suggestedPositionModal.name }} 建议仓位计算详情</h3>
       <div style="text-align: left; font-size: 14px; line-height: 1.6;">
-        <p><strong>计算结果：</strong>{{ suggestedPositionModal.suggestedPosition }}</p>
-        <p><strong>当前PE值：</strong>{{ suggestedPositionModal.currentPE }}</p>
+        <p v-once><strong>计算结果：</strong></p>
+        <p>{{ suggestedPositionModal.suggestedPosition }}</p>
+        <p v-once><strong>当前PE值：</strong></p>
+        <p>{{ suggestedPositionModal.currentPE }}</p>
         <br>
-        <p><strong>计算逻辑：</strong></p>
-        <p>1. 获取五年、十年和历史百分位数据</p>
-        <p>2. 计算综合百分位（加权平均：五年60%，十年30%，历史10%）</p>
-        <p>3. 根据综合百分位计算建议仓位（1 - 综合百分位）</p>
+        <p v-once><strong>计算逻辑：</strong></p>
+        <p v-once>1. 获取五年、十年和历史百分位数据</p>
+        <p v-once>2. 计算综合百分位（加权平均：五年60%，十年30%，历史10%）</p>
+        <p v-once>3. 根据综合百分位计算建议仓位（1 - 综合百分位）</p>
         <br>
-        <p><strong>计算过程：</strong></p>
+        <p v-once><strong>计算过程：</strong></p>
         <p>• 五年百分位：{{ suggestedPositionModal.calculationDetails.fiveYearPercentile }}%</p>
         <p>• 十年百分位：{{ suggestedPositionModal.calculationDetails.tenYearPercentile }}%</p>
         <p>• 历史百分位：{{ suggestedPositionModal.calculationDetails.historyPercentile }}%</p>
         <p>• 综合百分位计算：({{ suggestedPositionModal.calculationDetails.fiveYearPercentile }} × 0.6) + ({{ suggestedPositionModal.calculationDetails.tenYearPercentile }} × 0.3) + ({{ suggestedPositionModal.calculationDetails.historyPercentile }} × 0.1) = {{ suggestedPositionModal.calculationDetails.combinedPercentile }}%</p>
         <p>• 建议仓位计算：1 - ({{ suggestedPositionModal.calculationDetails.combinedPercentile }} / 100) = {{ suggestedPositionModal.calculationDetails.finalPosition }}%</p>
         <br>
-        <p><strong>权重说明：</strong></p>
-        <p>• 五年百分位权重60%：反映近期市场估值水平</p>
-        <p>• 十年百分位权重30%：反映中期市场估值水平</p>
-        <p>• 历史百分位权重10%：反映长期市场估值水平</p>
+        <p v-once><strong>权重说明：</strong></p>
+        <p v-once>• 五年百分位权重60%：反映近期市场估值水平</p>
+        <p v-once>• 十年百分位权重30%：反映中期市场估值水平</p>
+        <p v-once>• 历史百分位权重10%：反映长期市场估值水平</p>
         <br>
-        <p><strong>投资建议：</strong></p>
+        <p v-once><strong>投资建议：</strong></p>
         <div v-if="suggestedPositionModal.calculationDetails.finalPosition >= 80" style="background-color: #90ee90; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
-          <p style="color: #006400; margin: 0;"><strong>建议大幅增持</strong>：当前估值水平较低，建议仓位{{ suggestedPositionModal.calculationDetails.finalPosition }}%，可考虑增加投资。</p>
+          <p style="color: #006400; margin: 0;"><strong v-once>建议大幅增持</strong>：<span v-once>当前估值水平较低，建议仓位</span>{{ suggestedPositionModal.calculationDetails.finalPosition }}%，可考虑增加投资。</p>
         </div>
         <div v-else-if="suggestedPositionModal.calculationDetails.finalPosition >= 60" style="background-color: #e6f7ff; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
-          <p style="color: #0050b3; margin: 0;"><strong>建议适度增持</strong>：当前估值水平适中，建议仓位{{ suggestedPositionModal.calculationDetails.finalPosition }}%，可考虑适度增加投资。</p>
+          <p style="color: #0050b3; margin: 0;"><strong v-once>建议适度增持</strong>：<span v-once>当前估值水平适中，建议仓位</span>{{ suggestedPositionModal.calculationDetails.finalPosition }}%，可考虑适度增加投资。</p>
         </div>
         <div v-else-if="suggestedPositionModal.calculationDetails.finalPosition >= 40" style="background-color: #fff7e6; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
-          <p style="color: #d46b08; margin: 0;"><strong>建议持有观望</strong>：当前估值水平偏高，建议仓位{{ suggestedPositionModal.calculationDetails.finalPosition }}%，建议持有现有仓位观望。</p>
+          <p style="color: #d46b08; margin: 0;"><strong v-once>建议持有观望</strong>：<span v-once>当前估值水平偏高，建议仓位</span>{{ suggestedPositionModal.calculationDetails.finalPosition }}%，建议持有现有仓位观望。</p>
         </div>
         <div v-else style="background-color: #fff1f0; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
-          <p style="color: #cf1322; margin: 0;"><strong>建议减持</strong>：当前估值水平很高，建议仓位{{ suggestedPositionModal.calculationDetails.finalPosition }}%，建议考虑减持部分仓位。</p>
+          <p style="color: #cf1322; margin: 0;"><strong v-once>建议减持</strong>：<span v-once>当前估值水平很高，建议仓位</span>{{ suggestedPositionModal.calculationDetails.finalPosition }}%，建议考虑减持部分仓位。</p>
         </div>
       </div>
       <div class="modal-buttons">
-        <button @click="suggestedPositionModal.show = false" class="save-btn">关闭</button>
+        <button @click="suggestedPositionModal.show = false" class="save-btn"><span v-once>关闭</span></button>
       </div>
     </div>
   </div>
