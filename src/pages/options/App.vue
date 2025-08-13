@@ -3,6 +3,7 @@
   <button @click="exportData" style="margin-left: 10px;"><span v-once>导出数据</span></button>
   <input type="file" ref="importFile" style="display:none" @change="importData" accept=".json" />
   <button @click="triggerImport" style="margin-left: 10px;"><span v-once>导入数据</span></button>
+  <button @click="cleanAndSortPeData" style="margin-left: 10px;"><span v-once>清理数据</span></button>
   <h2>
     整体温度数据
     <span v-if="haomaiDate" style="font-size:14px;color:#888;margin-left:10px;">
@@ -1405,6 +1406,58 @@ export default {
         }
       };
       reader.readAsText(file);
+    },
+
+    // 清理和排序PE数据
+    cleanAndSortPeData() {
+      // 读取当前的all_pe_data
+      chrome.storage.local.get(['all_pe_data'], (result) => {
+        if (!result.all_pe_data || typeof result.all_pe_data !== 'object') {
+          alert('没有找到PE数据');
+          return;
+        }
+
+        const cleanedData = {};
+        
+        // 遍历每个代码的数据
+        Object.keys(result.all_pe_data).forEach(code => {
+          const dataArray = result.all_pe_data[code];
+          if (!Array.isArray(dataArray)) return;
+          
+          // 创建一个Map来去重，使用日期作为key
+          const uniqueDataMap = new Map();
+          
+          dataArray.forEach(item => {
+            if (item && item.date && item.pe !== undefined && item.pe !== null) {
+              // 如果同一个日期已存在，保留当前项（会覆盖之前的）
+              uniqueDataMap.set(item.date, {
+                date: item.date,
+                pe: item.pe
+              });
+            }
+          });
+          
+          // 将Map转换回数组
+          const uniqueDataArray = Array.from(uniqueDataMap.values());
+          
+          // 按日期从近到远排序
+          const sortedData = uniqueDataArray.sort((a, b) => {
+            const dateA = new Date(a.date || '');
+            const dateB = new Date(b.date || '');
+            return dateB - dateA; // 从近到远排序
+          });
+          
+          // 保存清理和排序后的数据
+          cleanedData[code] = sortedData;
+        });
+        
+        // 保存处理后的数据回storage
+        chrome.storage.local.set({ 'all_pe_data': cleanedData }, () => {
+          alert('PE数据清理和排序完成！');
+          // 刷新页面重载数据
+          location.reload();
+        });
+      });
     },
 
     // 新增持仓，保存到本地storage
