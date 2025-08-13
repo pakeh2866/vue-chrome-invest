@@ -2692,14 +2692,31 @@ export default {
       }
       // 处理pe历史数据
       if (result.all_pe_data && typeof result.all_pe_data === 'object') {
-        this.peValuesMap = {};
+        // 创建排序后的数据副本
+        const sortedAllPeData = {};
+        
         Object.keys(result.all_pe_data).forEach(code => {
-          this.peValuesMap[code] = result.all_pe_data[code].map(item => parseFloat(item.pe)).filter(v => !isNaN(v));
+          // 对每个代码的数据按日期从近到远排序
+          const sortedData = [...result.all_pe_data[code]].sort((a, b) => {
+            const dateA = new Date(a.date || '');
+            const dateB = new Date(b.date || '');
+            return dateB - dateA; // 从近到远排序
+          });
+          
+          sortedAllPeData[code] = sortedData;
+          
+          // 处理peValuesMap
+          this.peValuesMap = this.peValuesMap || {};
+          this.peValuesMap[code] = sortedData.map(item => parseFloat(item.pe)).filter(v => !isNaN(v));
         });
-      }
-      // 保留原始pe数据
-      if (result.all_pe_data && typeof result.all_pe_data === 'object') {
-        this.rawPeData = result.all_pe_data;
+        
+        // 保留排序后的原始pe数据
+        this.rawPeData = sortedAllPeData;
+        
+        // 将排序后的数据保存回storage
+        chrome.storage.local.set({ 'all_pe_data': sortedAllPeData }, () => {
+          console.log('all_pe_data 已按日期从近到远排序并保存');
+        });
       }
       console.log('storage.positions:', this.positions);
       // 保存原始顺序
