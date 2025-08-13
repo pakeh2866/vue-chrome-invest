@@ -177,8 +177,6 @@
             <span v-else>--</span>
           </td>
           <td
-            @mouseenter="showTooltip($event, getLatestPeWithDate(codeToPeKey(item.code)).date)"
-            @mouseleave="hideTooltip"
             :style="{
               backgroundColor: peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0 && getFiveYearAverage(codeToPeKey(item.code)) !== '--' && getLatestPe(codeToPeKey(item.code)) < parseFloat(getFiveYearAverage(codeToPeKey(item.code))) ? 'lightgreen' : ''
             }"
@@ -200,7 +198,11 @@
             {{ calculateSuggestedPosition(item) }}
           </td>
           <td class="action-buttons">
-            <button @click="onCheeseDataClick(item)"><span v-once>芝士</span></button>
+            <button
+              @click="onCheeseDataClick(item)"
+              @mouseenter="showTooltip($event, getLatestPeWithDate(codeToPeKey(item.code)).date)"
+              @mouseleave="hideTooltip"
+            ><span v-once>芝士</span></button>
             <button @click="editIndex(index)"><span v-once>编辑</span></button>
             <button @click="deleteIndex(index)"><span v-once>删除</span></button>
           </td>
