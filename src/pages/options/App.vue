@@ -1791,6 +1791,10 @@ export default {
       if (code === 'sh000922') {
         return '000922.CSI';
       }
+      // 特殊处理 sh932000 和 932000.CSI 的对应关系
+      if (code === 'sh932000') {
+        return '932000.CSI';
+      }
       if (code.startsWith('sh')) return code.slice(2).toUpperCase() + '.SH';
       if (code.startsWith('sz')) return code.slice(2).toUpperCase() + '.SZ';
       if (code.startsWith('hk')) {
