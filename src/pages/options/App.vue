@@ -938,7 +938,7 @@
 // 定义你要打开的多个页面的 URL 列表
 const targetUrls = [
     "https://youzhiyouxing.cn/data", // 替换为你的第一个目标网站 URL
-    "https://stock.cheesefortune.com/",  // 替换为你的第二个目标网站 URL
+    "https://stock.cheesefortune.com/pepChat?code=000985.CSI&type=0&years=2&stockName=%E4%B8%AD%E8%AF%81%E5%85%A8%E6%8C%87&isIndex=1",  // 替换为你的第二个目标网站 URL
     "https://youzhiyouxing.cn/data/market", // 如果有更多，可以在这里添加
     "https://trade.ehowbuy.com/vue-newpig/tool/thermometerDetail"
 ];
