@@ -202,6 +202,7 @@
               @click="onCheeseDataClick(item)"
               @mouseenter="showTooltip($event, getLatestPeWithDate(codeToPeKey(item.code)).date)"
               @mouseleave="hideTooltip"
+              :style="{ backgroundColor: isCheeseDateOutdated(codeToPeKey(item.code)) ? '#ffa940' : '' }"
             ><span v-once>芝士</span></button>
             <button @click="editIndex(index)"><span v-once>编辑</span></button>
             <button @click="deleteIndex(index)"><span v-once>删除</span></button>
@@ -2603,6 +2604,22 @@ export default {
       }
       
       return {};
+    },
+    // 判断芝士数据日期是否超过3天
+    isCheeseDateOutdated(peKey) {
+      const result = this.getLatestPeWithDate(peKey);
+      if (!result.date) return false;
+      
+      const cheeseDate = new Date(result.date);
+      const currentDate = new Date();
+      
+      // 计算日期差异（毫秒）
+      const diffTime = Math.abs(currentDate - cheeseDate);
+      // 转换为天数
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      // 如果日期差异超过3天，返回true
+      return diffDays > 3;
     }
   },
   mounted() {
