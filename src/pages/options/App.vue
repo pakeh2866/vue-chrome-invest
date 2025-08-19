@@ -1079,6 +1079,11 @@ export default {
             '2022-10-31': '4.2',
             '2024-2-5': '9.9',
             '2024-9-13': '7.3'
+          },
+          {
+            name: '中证全指PE',
+            temperature: '',
+            yield: '',
           }
         ],
       shouldHighlight2019: false,
@@ -2677,6 +2682,22 @@ export default {
       
       // 如果日期差异超过3天，返回true
       return diffDays > 3;
+    },
+    
+    // 获取中证全指PE的最新值
+    getZZQZLatestPE() {
+      if (!this.rawPeData || !this.rawPeData['000985.CSI'] || !Array.isArray(this.rawPeData['000985.CSI'])) {
+        return '--';
+      }
+      
+      const zzqzData = this.rawPeData['000985.CSI'];
+      if (zzqzData.length === 0) {
+        return '--';
+      }
+      
+      // 已按日期从近到远排序，第一个就是最新的
+      const latestPe = zzqzData[0].pe;
+      return latestPe ? parseFloat(latestPe).toFixed(2) : '--';
     }
   },
   mounted() {
@@ -2791,6 +2812,24 @@ export default {
         chrome.storage.local.set({ 'all_pe_data': sortedAllPeData }, () => {
           console.log('all_pe_data 已按日期从近到远排序并保存');
         });
+        
+        // 获取中证全指PE数据
+        if (sortedAllPeData['000985.CSI'] && Array.isArray(sortedAllPeData['000985.CSI']) && sortedAllPeData['000985.CSI'].length > 0) {
+          const zzqzData = sortedAllPeData['000985.CSI'];
+          const latestPe = zzqzData[0].pe; // 已按日期从近到远排序，第一个就是最新的
+          this.temperatureData[2].temperature = latestPe ? parseFloat(latestPe).toFixed(2) : 'N/A';
+          
+          // 计算中证全指PE的历史百分位
+          const peValues = zzqzData.map(item => parseFloat(item.pe)).filter(pe => !isNaN(pe));
+          if (peValues.length > 0) {
+            const currentPe = parseFloat(latestPe);
+            if (!isNaN(currentPe)) {
+              const lowerCount = peValues.filter(pe => pe < currentPe).length;
+              const percentile = ((lowerCount / peValues.length) * 100).toFixed(0);
+              this.temperatureData[2].yield = `${percentile}%`;
+            }
+          }
+        }
       }
       console.log('storage.positions:', this.positions);
       // 保存原始顺序
