@@ -2829,6 +2829,49 @@ export default {
               this.temperatureData[2].yield = `${percentile}%`;
             }
           }
+          
+          // 填充中证全指PE在指定日期的值
+          const dates = ['2015-6-12', '2019-1-2', '2021-2-19', '2022-4-26', '2022-10-31', '2024-2-5', '2024-9-13'];
+          dates.forEach((date) => {
+            const targetDate = new Date(date);
+            const targetYear = targetDate.getFullYear();
+            const targetMonth = targetDate.getMonth();
+            const targetDay = targetDate.getDate();
+            
+            // 查找指定日期的PE值
+            const record = zzqzData.find(item => {
+              if (!item.date) return false;
+              const itemDate = new Date(item.date);
+              return itemDate.getFullYear() === targetYear &&
+                     itemDate.getMonth() === targetMonth &&
+                     itemDate.getDate() === targetDay;
+            });
+            
+            if (record && record.pe) {
+              // 如果找到确切日期的记录，使用该记录的PE值
+              this.temperatureData[2][date] = parseFloat(record.pe).toFixed(2);
+            } else {
+              // 如果没有找到确切日期的记录，查找最接近的日期
+              let closestRecord = null;
+              let minDiff = Infinity;
+              
+              zzqzData.forEach(item => {
+                if (!item.date || !item.pe) return;
+                const itemDate = new Date(item.date);
+                const diff = Math.abs(itemDate - targetDate);
+                if (diff < minDiff) {
+                  minDiff = diff;
+                  closestRecord = item;
+                }
+              });
+              
+              if (closestRecord) {
+                this.temperatureData[2][date] = parseFloat(closestRecord.pe).toFixed(2);
+              } else {
+                this.temperatureData[2][date] = 'N/A';
+              }
+            }
+          });
         }
       }
       console.log('storage.positions:', this.positions);
