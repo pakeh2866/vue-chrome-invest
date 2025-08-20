@@ -45,6 +45,11 @@ window.onload = function() {
             });
             
             console.log('Trading_Volume数据:', Trading_Volume);
+            
+            // 将 Trading_Volume 数据存储到 chrome.storage.local
+            chrome.storage.local.set({ 'Trading_Volume': Trading_Volume }, function() {
+                console.log('Trading_Volume 已存储到 chrome.storage.local');
+            });
         }
     }, 3000); // 延迟1秒
 };
