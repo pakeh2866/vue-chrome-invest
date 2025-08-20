@@ -46,14 +46,49 @@ window.onload = function() {
             
             console.log('Trading_Volume数据:', Trading_Volume);
             
-            // 将 Trading_Volume 数据存储到 chrome.storage.local
-            chrome.storage.local.set({ 'Trading_Volume': Trading_Volume }, function() {
-                console.log('Trading_Volume 已存储到 chrome.storage.local');
+            // 从 chrome.storage.local 读取已有的 Trading_Volume 数据
+            chrome.storage.local.get(['Trading_Volume'], function(result) {
+                let existingData = result.Trading_Volume || [];
+                console.log('已有的 Trading_Volume 数据:', existingData);
+                
+                // 比较新数据与已有数据，找出新增的数据
+                let newData = [];
+                let existingDates = existingData.map(item => item.date);
+                
+                Trading_Volume.forEach(item => {
+                    if (!existingDates.includes(item.date)) {
+                        newData.push(item);
+                    }
+                });
+                
+                console.log('新增的 Trading_Volume 数据:', newData);
+                
+                // 如果有新增数据，则更新存储
+                if (newData.length > 0) {
+                    // 合并新数据与已有数据
+                    let updatedData = [...existingData, ...newData];
+                    
+                    // 只保留近30天的数据
+                    let thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    console.log('30天前的日期:', thirtyDaysAgo);
+                    
+                    updatedData = updatedData.filter(item => {
+                        // 假设日期格式为 'YYYY-MM-DD'
+                        let itemDate = new Date(item.date);
+                        return itemDate >= thirtyDaysAgo;
+                    });
+                    
+                    console.log('更新后的 Trading_Volume 数据:', updatedData);
+                    
+                    // 将更新后的数据存储回 chrome.storage.local
+                    chrome.storage.local.set({ 'Trading_Volume': updatedData }, function() {
+                        console.log('Trading_Volume 已更新并存储到 chrome.storage.local');
+                    });
+                } else {
+                    console.log('没有新增的 Trading_Volume 数据，无需更新');
+                }
             });
         }
     }, 3000); // 延迟1秒
 };
-
-
-
-
