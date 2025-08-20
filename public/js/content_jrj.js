@@ -5,12 +5,14 @@ console.log("主内容脚本 content_jrj.js 已加载到页面:", window.locatio
 
 window.onload = function() {
     setTimeout(function() {
-        // 获取 class="el-table__body-wrapper is-scrolling-none" 对应的元素
-        const tableWrapper = document.querySelector('.el-table__body-wrapper.is-scrolling-none');
+        // 获取所有 class="el-table__body-wrapper is-scrolling-none" 对应的元素
+        const tableWrappers = document.querySelectorAll('.el-table__body-wrapper.is-scrolling-none');
+        const tableWrapper = tableWrappers.length > 1 ? tableWrappers[1] : null;
         
         // 输出 log
-        console.log('获取到的元素:', tableWrapper);
-        console.log('元素是否存在:', tableWrapper ? '是' : '否');
+        console.log('找到的元素总数:', tableWrappers.length);
+        console.log('获取第二个元素:', tableWrapper);
+        console.log('第二个元素是否存在:', tableWrapper ? '是' : '否');
         if (tableWrapper) {
             console.log('元素详细信息:', {
                 tagName: tableWrapper.tagName,
