@@ -47,6 +47,14 @@
       "js": [
         "js/content_cheesefortune.js"
       ]
+    },
+    {
+      "matches": [
+        "https://summary.jrj.com.cn/dataCenter/zdtwdj"
+      ],
+      "js": [
+        "js/content_jrj.js"
+      ]
     }
   ],
   "web_accessible_resources": [
