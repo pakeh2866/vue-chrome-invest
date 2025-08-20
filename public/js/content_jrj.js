@@ -20,6 +20,31 @@ window.onload = function() {
                 id: tableWrapper.id,
                 innerText: tableWrapper.innerText ? tableWrapper.innerText.substring(0, 100) + '...' : '无文本内容'
             });
+            
+            // 获取表格中的所有行
+            const rows = tableWrapper.querySelectorAll('tr');
+            console.log('找到的行数:', rows.length);
+            
+            // 存储Trading Volume数据
+            const Trading_Volume = [];
+            
+            // 遍历每一行，获取第一列和第6列的内容
+            rows.forEach((row, index) => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 6) {
+                    const date = cells[0].innerText.trim();  // 第一列是日期
+                    const volume = cells[5].innerText.trim();  // 第6列是Trading Volume
+                    
+                    Trading_Volume.push({
+                        date: date,
+                        volume: volume
+                    });
+                    
+                    console.log(`第${index + 1}行数据:`, { date, volume });
+                }
+            });
+            
+            console.log('Trading_Volume数据:', Trading_Volume);
         }
     }, 3000); // 延迟1秒
 };
