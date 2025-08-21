@@ -2715,7 +2715,7 @@ export default {
   },
   mounted() {
     chrome.storage.local.get([
-      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable'
+      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable', 'Trading_Volume'
     ], (result) => {
       console.log('读取到的indexData:', result.indexData);
       console.log('读取到的pe_values:', result.all_pe_data);
@@ -2952,6 +2952,26 @@ export default {
         this.$nextTick(() => {
           this.initTemperaturePositionChart();
         });
+      }
+      
+      // 处理Trading_Volume数据，计算近22日成交额并设置到"两市近22日成交额"的temperature字段
+      if (result.Trading_Volume && Array.isArray(result.Trading_Volume)) {
+        // 获取最近的22条数据
+        const recent22Data = result.Trading_Volume.slice(0, 22);
+        
+        // 计算volume值之和
+        const sum = recent22Data.reduce((acc, item) => {
+          // 移除volume中的逗号并转换为数字
+          const volume = parseFloat(item.volume.replace(/,/g, '')) || 0;
+          return acc + volume;
+        }, 0);
+        
+        // 设置到"两市近22日成交额"的temperature字段
+        // 找到"两市近22日成交额"在temperatureData中的索引
+        const tradingVolumeIndex = this.temperatureData.findIndex(item => item.name === '两市近22日成交额');
+        if (tradingVolumeIndex !== -1) {
+          this.temperatureData[tradingVolumeIndex].temperature = sum.toLocaleString();
+        }
       }
     });
     this.$watch(
