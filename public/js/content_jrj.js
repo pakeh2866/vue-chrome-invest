@@ -3,92 +3,122 @@
 
 console.log("主内容脚本 content_jrj.js 已加载到页面:", window.location.href);
 
-window.onload = function() {
-    setTimeout(function() {
-        // 获取所有 class="el-table__body-wrapper is-scrolling-none" 对应的元素
-        const tableWrappers = document.querySelectorAll('.el-table__body-wrapper.is-scrolling-none');
-        const tableWrapper = tableWrappers.length > 1 ? tableWrappers[1] : null;
+// 获取Trading Volume数据的函数
+function fetchTradingVolumeData() {
+    // 获取所有 class="el-table__body-wrapper is-scrolling-none" 对应的元素
+    const tableWrappers = document.querySelectorAll('.el-table__body-wrapper.is-scrolling-none');
+    const tableWrapper = tableWrappers.length > 1 ? tableWrappers[1] : null;
+    
+    // 输出 log
+    console.log('找到的元素总数:', tableWrappers.length);
+    console.log('获取第二个元素:', tableWrapper);
+    console.log('第二个元素是否存在:', tableWrapper ? '是' : '否');
+    if (tableWrapper) {
+        console.log('元素详细信息:', {
+            tagName: tableWrapper.tagName,
+            className: tableWrapper.className,
+            id: tableWrapper.id,
+            innerText: tableWrapper.innerText ? tableWrapper.innerText.substring(0, 100) + '...' : '无文本内容'
+        });
         
-        // 输出 log
-        console.log('找到的元素总数:', tableWrappers.length);
-        console.log('获取第二个元素:', tableWrapper);
-        console.log('第二个元素是否存在:', tableWrapper ? '是' : '否');
-        if (tableWrapper) {
-            console.log('元素详细信息:', {
-                tagName: tableWrapper.tagName,
-                className: tableWrapper.className,
-                id: tableWrapper.id,
-                innerText: tableWrapper.innerText ? tableWrapper.innerText.substring(0, 100) + '...' : '无文本内容'
-            });
-            
-            // 获取表格中的所有行
-            const rows = tableWrapper.querySelectorAll('tr');
-            console.log('找到的行数:', rows.length);
-            
-            // 存储Trading Volume数据
-            const Trading_Volume = [];
-            
-            // 遍历每一行，获取第一列和第6列的内容
-            rows.forEach((row, index) => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 6) {
-                    const date = cells[0].innerText.trim();  // 第一列是日期
-                    const volume = cells[5].innerText.trim();  // 第6列是Trading Volume
-                    
-                    Trading_Volume.push({
-                        date: date,
-                        volume: volume
-                    });
-                    
-                    console.log(`第${index + 1}行数据:`, { date, volume });
-                }
-            });
-            
-            console.log('Trading_Volume数据:', Trading_Volume);
-            
-            // 从 chrome.storage.local 读取已有的 Trading_Volume 数据
-            chrome.storage.local.get(['Trading_Volume'], function(result) {
-                let existingData = result.Trading_Volume || [];
-                console.log('已有的 Trading_Volume 数据:', existingData);
+        // 获取表格中的所有行
+        const rows = tableWrapper.querySelectorAll('tr');
+        console.log('找到的行数:', rows.length);
+        
+        // 存储Trading Volume数据
+        const Trading_Volume = [];
+        
+        // 遍历每一行，获取第一列和第6列的内容
+        rows.forEach((row, index) => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 6) {
+                const date = cells[0].innerText.trim();  // 第一列是日期
+                const volume = cells[5].innerText.trim();  // 第6列是Trading Volume
                 
-                // 比较新数据与已有数据，找出新增的数据
-                let newData = [];
-                let existingDates = existingData.map(item => item.date);
-                
-                Trading_Volume.forEach(item => {
-                    if (!existingDates.includes(item.date)) {
-                        newData.push(item);
-                    }
+                Trading_Volume.push({
+                    date: date,
+                    volume: volume
                 });
                 
-                console.log('新增的 Trading_Volume 数据:', newData);
-                
-                // 如果有新增数据，则更新存储
-                if (newData.length > 0) {
-                    // 合并新数据与已有数据
-                    let updatedData = [...existingData, ...newData];
-                    
-                    // 只保留近30天的数据
-                    let thirtyDaysAgo = new Date();
-                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                    console.log('30天前的日期:', thirtyDaysAgo);
-                    
-                    updatedData = updatedData.filter(item => {
-                        // 假设日期格式为 'YYYY-MM-DD'
-                        let itemDate = new Date(item.date);
-                        return itemDate >= thirtyDaysAgo;
-                    });
-                    
-                    console.log('更新后的 Trading_Volume 数据:', updatedData);
-                    
-                    // 将更新后的数据存储回 chrome.storage.local
-                    chrome.storage.local.set({ 'Trading_Volume': updatedData }, function() {
-                        console.log('Trading_Volume 已更新并存储到 chrome.storage.local');
-                    });
-                } else {
-                    console.log('没有新增的 Trading_Volume 数据，无需更新');
+                console.log(`第${index + 1}行数据:`, { date, volume });
+            }
+        });
+        
+        console.log('Trading_Volume数据:', Trading_Volume);
+        
+        // 从 chrome.storage.local 读取已有的 Trading_Volume 数据
+        chrome.storage.local.get(['Trading_Volume'], function(result) {
+            let existingData = result.Trading_Volume || [];
+            console.log('已有的 Trading_Volume 数据:', existingData);
+            
+            // 比较新数据与已有数据，找出新增的数据
+            let newData = [];
+            let existingDates = existingData.map(item => item.date);
+            
+            Trading_Volume.forEach(item => {
+                if (!existingDates.includes(item.date)) {
+                    newData.push(item);
                 }
             });
-        }
-    }, 3000); // 延迟1秒
+            
+            console.log('新增的 Trading_Volume 数据:', newData);
+            
+            // 如果有新增数据，则更新存储
+            if (newData.length > 0) {
+                // 合并新数据与已有数据
+                let updatedData = [...existingData, ...newData];
+                
+                // 只保留近30天的数据
+                let thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                console.log('30天前的日期:', thirtyDaysAgo);
+                
+                updatedData = updatedData.filter(item => {
+                    // 假设日期格式为 'YYYY-MM-DD'
+                    let itemDate = new Date(item.date);
+                    return itemDate >= thirtyDaysAgo;
+                });
+                
+                console.log('更新后的 Trading_Volume 数据:', updatedData);
+                
+                // 将更新后的数据存储回 chrome.storage.local
+                chrome.storage.local.set({ 'Trading_Volume': updatedData }, function() {
+                    console.log('Trading_Volume 已更新并存储到 chrome.storage.local');
+                });
+            } else {
+                console.log('没有新增的 Trading_Volume 数据，无需更新');
+            }
+        });
+    }
+}
+
+window.onload = function() {
+    // 创建一个按钮
+    const button = document.createElement('button');
+    button.innerText = '获取Trading Volume数据';
+    button.style.position = 'fixed';
+    button.style.top = '10px';
+    button.style.right = '10px';
+    button.style.zIndex = '9999';
+    button.style.padding = '10px';
+    button.style.backgroundColor = '#4CAF50';
+    button.style.color = 'white';
+    button.style.border = 'none';
+    button.style.borderRadius = '5px';
+    button.style.cursor = 'pointer';
+    
+    // 为按钮添加点击事件监听器
+    button.addEventListener('click', function() {
+        console.log('手动获取Trading Volume数据...');
+        fetchTradingVolumeData();
+    });
+    
+    // 将按钮添加到页面上
+    document.body.appendChild(button);
+    
+    // 页面加载完成后，延迟1秒自动获取一次数据
+    setTimeout(function() {
+        console.log('自动获取Trading Volume数据...');
+        fetchTradingVolumeData();
+    }, 1000);
 };
