@@ -68,15 +68,12 @@ function fetchTradingVolumeData() {
                 // 合并新数据与已有数据
                 let updatedData = [...existingData, ...newData];
                 
-                // 只保留近30天的数据
-                let thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                console.log('30天前的日期:', thirtyDaysAgo);
-                
-                updatedData = updatedData.filter(item => {
+                // 按日期从近到远排序
+                updatedData.sort((a, b) => {
                     // 假设日期格式为 'YYYY-MM-DD'
-                    let itemDate = new Date(item.date);
-                    return itemDate >= thirtyDaysAgo;
+                    let dateA = new Date(a.date);
+                    let dateB = new Date(b.date);
+                    return dateB - dateA; // 从近到远
                 });
                 
                 console.log('更新后的 Trading_Volume 数据:', updatedData);
