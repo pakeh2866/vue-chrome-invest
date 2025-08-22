@@ -39,6 +39,7 @@
       </tr>
     </tbody>
   </table>
+  <div>2025年7月两市总市值：940675。最新比值：{{ (parseFloat(temperatureData[3]?.temperature?.replace(/,/g, '')) / 940675).toFixed(4) || 'N/A' }}。这个值的计算方法为两市近22日成交额除940675</div>
     <div style="display: flex; align-items: center; gap: 10px;">
         <h2 style="margin-right: 10px;">指数参考</h2>
         <button @click="addIndex"><span v-once>新增指数</span></button>
