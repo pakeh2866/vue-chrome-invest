@@ -39,7 +39,7 @@
       </tr>
     </tbody>
   </table>
-  <div>2025年7月两市总市值：940675。最新比值：{{ (parseFloat(temperatureData[3]?.temperature?.replace(/,/g, '')) / 940675).toFixed(4) || 'N/A' }}。这个值的计算方法为两市近22日成交额除940675</div>
+  <div>2025年7月两市总市值：940675。最新比值：<span :style="latestRatioStyle">{{ latestRatio }}</span>。这个值的计算方法为两市近22日成交额除940675</div>
     <div style="display: flex; align-items: center; gap: 10px;">
         <h2 style="margin-right: 10px;">指数参考</h2>
         <button @click="addIndex"><span v-once>新增指数</span></button>
@@ -3216,6 +3216,40 @@ export default {
       
       const diff = Math.abs(equityAStockRatio - suggestedPosition);
       return diff > 10;
+    },
+
+    // 计算 "两市近22日成交额" 的比值
+    latestRatio() {
+      const tempData = this.temperatureData[3];
+      if (!tempData || tempData.temperature === undefined || tempData.temperature === null || tempData.temperature === '') {
+        return 'N/A';
+      }
+      const value = (parseFloat(tempData.temperature.replace(/,/g, '')) / 940675) * 100;
+      if (isNaN(value)) {
+        return 'N/A';
+      }
+      return value.toFixed(2) + '%';
+    },
+
+    // 根据 latestRatio 的值返回相应的样式
+    latestRatioStyle() {
+      if (this.latestRatio === 'N/A') {
+        return {};
+      }
+      const value = parseFloat(this.latestRatio.replace('%', ''));
+      if (isNaN(value)) {
+        return {};
+      }
+      if (value < 20) {
+        return { color: 'green' };
+      } else if (value >= 40 && value <= 60) {
+        // 使用文件中已有的 "正常区间" 背景色，提高可读性
+        return { backgroundColor: '#ffe066', color: 'black' };
+      } else if (value > 60) {
+        return { color: 'red' };
+      } else {
+        return {};
+      }
     }
   }
 }
