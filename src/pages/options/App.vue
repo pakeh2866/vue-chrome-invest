@@ -450,7 +450,7 @@
        <h3>建议A股仓位计算逻辑</h3>
        <div style="text-align: left; font-size: 14px; line-height: 1.6;">
           <p><strong>计算公式：</strong></p>
-          <p>1. 计算平均温度 = (有知有行温度 + 好买温度) / 2</p>
+          <p>1. 计算平均温度 = (有知有行温度 × 0.7 + 好买温度 × 0.3)</p>
           <p>2. 根据平均温度在温度-仓位对照表中进行线性插值计算建议仓位</p>
           <br>
           <p><strong>数据来源：</strong></p>
@@ -459,8 +459,8 @@
           <br>
           <p><strong>计算过程：</strong></p>
           <p v-if="temperatureData && temperatureData.length >= 2">
-            平均温度 = ({{ parseFloat(temperatureData[0]?.temperature) || 'N/A' }} + {{ parseFloat(temperatureData[1]?.temperature) || 'N/A' }}) / 2<br>
-            = {{ (parseFloat(temperatureData[0]?.temperature) + parseFloat(temperatureData[1]?.temperature)) / 2 || 'N/A' }}<br>
+            平均温度 = ({{ parseFloat(temperatureData[0]?.temperature) || 'N/A' }} × 0.7 + {{ parseFloat(temperatureData[1]?.temperature) || 'N/A' }} × 0.3)<br>
+            = {{ (parseFloat(temperatureData[0]?.temperature) * 0.7 + parseFloat(temperatureData[1]?.temperature) * 0.3) || 'N/A' }}<br>
             建议仓位 = {{ suggestedPositionAH }}<br>
           </p>
           <p v-else>数据尚未加载完成</p>
@@ -3033,7 +3033,7 @@ export default {
       }
       
       const { youzhiyouxingTemp, haomaiTemp } = this.parsedTemperatureData;
-      return (youzhiyouxingTemp + haomaiTemp) / 2;
+      return (youzhiyouxingTemp * 0.7 + haomaiTemp * 0.3);
     },
     
     // 优化后的建议A股仓位计算
