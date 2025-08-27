@@ -39,7 +39,6 @@
       </tr>
     </tbody>
   </table>
-  <div>2025年7月两市总市值：940675。最新比值：<span :style="latestRatioStyle">{{ latestRatio }}</span>。这个值的计算方法为两市近22日成交额除940675</div>
     <div style="display: flex; align-items: center; gap: 10px;">
         <h2 style="margin-right: 10px;">指数参考</h2>
         <button @click="addIndex"><span v-once>新增指数</span></button>
@@ -1098,6 +1097,18 @@ export default {
             '2022-10-31': '127023',
             '2024-2-5': '161671',
             '2024-9-13': '124077'
+          },
+          {
+            name: '两市量值比',
+            temperature: '',
+            yield: '',
+            '2015-6-12': '62.17%',
+            '2019-1-2': '12.24%',
+            '2021-2-19': '18.07%',
+            '2022-4-26': '22.68%',
+            '2022-10-31': '17.16%',
+            '2024-2-5': '18.80%',
+            '2024-9-13': '17.91%'
           }
         ],
       shouldHighlight2019: false,
@@ -2972,6 +2983,20 @@ export default {
         const tradingVolumeIndex = this.temperatureData.findIndex(item => item.name === '两市近22日成交额');
         if (tradingVolumeIndex !== -1) {
           this.temperatureData[tradingVolumeIndex].temperature = sum.toLocaleString();
+          
+          // 计算"两市量值比"的值（两市近22日成交额除两市当月市值）
+          const marketCapIndex = this.temperatureData.findIndex(item => item.name === '两市量值比');
+          if (marketCapIndex !== -1) {
+            // 获取两市当月市值，如果没有值则使用默认值940675
+            let marketCap = 940675;
+            if (this.temperatureData[marketCapIndex].temperature && this.temperatureData[marketCapIndex].temperature !== '') {
+              marketCap = parseFloat(this.temperatureData[marketCapIndex].temperature.replace(/,/g, '')) || 940675;
+            }
+            
+            // 计算比值（百分比）
+            const ratio = (sum / marketCap) * 100;
+            this.temperatureData[marketCapIndex].temperature = ratio.toFixed(2) + '%';
+          }
         }
       }
     });
@@ -3224,7 +3249,13 @@ export default {
       if (!tempData || tempData.temperature === undefined || tempData.temperature === null || tempData.temperature === '') {
         return 'N/A';
       }
-      const value = (parseFloat(tempData.temperature.replace(/,/g, '')) / 940675) * 100;
+      // 获取两市当月市值数据
+      const marketCapData = this.temperatureData[4];
+      let marketCap = 940675; // 默认值
+      if (marketCapData && marketCapData.temperature && marketCapData.temperature !== '') {
+        marketCap = parseFloat(marketCapData.temperature.replace(/,/g, '')) || 940675;
+      }
+      const value = (parseFloat(tempData.temperature.replace(/,/g, '')) / marketCap) * 100;
       if (isNaN(value)) {
         return 'N/A';
       }
