@@ -940,7 +940,6 @@
 // 定义你要打开的多个页面的 URL 列表
 const targetUrls = [
     "https://youzhiyouxing.cn/data", // 替换为你的第一个目标网站 URL
-    "https://stock.cheesefortune.com/pepChat?code=000985.CSI&type=0&years=2&stockName=%E4%B8%AD%E8%AF%81%E5%85%A8%E6%8C%87&isIndex=1",  // 替换为你的第二个目标网站 URL
     "https://youzhiyouxing.cn/data/market", // 如果有更多，可以在这里添加
     "https://trade.ehowbuy.com/vue-newpig/tool/thermometerDetail",
     "https://summary.jrj.com.cn/dataCenter/zdtwdj"
@@ -2987,8 +2986,8 @@ export default {
           // 计算"两市量值比"的值（两市近22日成交额除两市当月市值）
           const marketCapIndex = this.temperatureData.findIndex(item => item.name === '两市量值比');
           if (marketCapIndex !== -1) {
-            // 获取两市当月市值，如果没有值则使用默认值940675
-            let marketCap = 940675;
+            // 获取两市当月市值，如果没有值则使用默认值 1032876
+            let marketCap = 1032876;
             if (this.temperatureData[marketCapIndex].temperature && this.temperatureData[marketCapIndex].temperature !== '') {
               marketCap = parseFloat(this.temperatureData[marketCapIndex].temperature.replace(/,/g, '')) || 940675;
             }
