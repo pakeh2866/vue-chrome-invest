@@ -69,8 +69,6 @@
           <th>五年百分位</th>
           <th>十年百分位</th>
           <th>历史百分位</th>
-          <th>zs市盈率</th>
-          <th>zs百分位</th>
           <th>建议仓位</th>
           <th>操作</th>
         </tr>
@@ -174,22 +172,6 @@
               @click="showHistoryPercentileModal(item)">
             <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
               {{ getHistoryPercentileForDisplay(item) }}%
-            </span>
-            <span v-else>--</span>
-          </td>
-          <td
-            :style="{
-              backgroundColor: peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0 && getFiveYearAverage(codeToPeKey(item.code)) !== '--' && getLatestPe(codeToPeKey(item.code)) < parseFloat(getFiveYearAverage(codeToPeKey(item.code))) ? 'lightgreen' : ''
-            }"
-          >
-            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
-              {{ getLatestPe(codeToPeKey(item.code)) }}
-            </span>
-            <span v-else>--</span>
-          </td>
-          <td>
-            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
-              {{ getPercentile(getLatestPe(codeToPeKey(item.code)), peValuesMap[codeToPeKey(item.code)]) }}%
             </span>
             <span v-else>--</span>
           </td>
