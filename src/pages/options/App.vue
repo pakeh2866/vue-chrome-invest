@@ -31,7 +31,9 @@
     <tbody>
       <tr v-for="(item, index) in temperatureData" :key="index">
         <td>{{ item.name }}</td>
-        <td>{{ item.temperature }}</td>
+        <td @click="item.name === '两市量值比' ? showMarketValueRatioModal() : null" :style="item.name === '两市量值比' ? 'cursor: pointer; text-decoration: underline;' : ''">
+          {{ item.temperature }}
+        </td>
         <td>{{ item.yield }}</td>
         <td v-for="date in ['2015-6-12', '2019-1-2', '2021-2-19', '2022-4-26', '2022-10-31', '2024-2-5', '2024-9-13']" :key="date" :class="{ 'highlight': item[`${date}_isNext`], 'deep-green': (date === '2019-1-2' && shouldHighlight2019) || (date === '2024-2-5' && shouldHighlight2024) }">
           {{ item[date] || 'N/A' }}
@@ -915,6 +917,110 @@
       </div>
     </div>
   </div>
+  
+  <!-- 两市量值比计算详情模态框 -->
+  <div v-if="marketValueRatioModal.show" class="modal-overlay" @click="marketValueRatioModal.show = false">
+    <div class="modal-content" style="width: 700px; max-height: 85vh; overflow-y: auto;" @click.stop>
+      <h3>两市量值比计算详情</h3>
+      <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+        <p><strong>计算结果：</strong>{{ marketValueRatioModal.currentRatio }}</p>
+        <br>
+        <p><strong>计算逻辑：</strong></p>
+        <p>1. 获取最近22个交易日的两市成交额数据</p>
+        <p>2. 计算这22日成交额的总和</p>
+        <p>3. 将成交额总和除以两市当月市值，得出比值</p>
+        <br>
+        <p><strong>计算过程：</strong></p>
+        <p>• 近22日成交额总和：{{ marketValueRatioModal.tradingVolume }}</p>
+        <p>• 两市当月市值：{{ marketValueRatioModal.marketCap }}</p>
+        <p>• 量值比计算：({{ marketValueRatioModal.calculationDetails.tradingVolumeSum.toLocaleString() }} ÷ {{ marketValueRatioModal.calculationDetails.marketCapValue.toLocaleString() }}) × 100 = {{ marketValueRatioModal.currentRatio }}</p>
+        <br>
+        <p><strong>指标说明：</strong></p>
+        <p>• 两市量值比是衡量市场活跃度的重要指标</p>
+        <p>• 计算公式：量值比 = (近22日成交额总和 ÷ 两市当月市值) × 100%</p>
+        <p>• 该指标反映了市场资金流动性与市值的相对关系</p>
+        <br>
+        
+        <p><strong>近22日成交额总和：{{ marketValueRatioModal.tradingVolume }}</strong></p>
+        <p>下面列出22日的成交额：</p>
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; margin-top: 10px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead style="position: sticky; top: 0; background-color: #f5f5f5; z-index: 10;">
+              <tr>
+                <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">序号</th>
+                <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
+                <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">成交额</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(item, index) in marketValueRatioModal.calculationDetails.dailyTradingVolumes" :key="index">
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{{ index + 1 }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px;">{{ item.date }}</td>
+                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">{{ parseFloat(item.volume).toLocaleString() }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <br>
+        
+        <p><strong>历史参考：</strong></p>
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">日期</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">量值比</th>
+              <th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5;">市场状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">2015-6-12</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">62.17%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">牛市高点</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">2019-1-2</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">12.24%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">熊市低点</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">2021-2-19</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">18.07%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">结构性牛市</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">2022-4-26</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">22.68%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">市场调整期</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">2022-10-31</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">17.16%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">市场底部区域</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">2024-2-5</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">18.80%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">市场反弹期</td>
+            </tr>
+            <tr>
+              <td style="border: 1px solid #ddd; padding: 8px;">2024-9-13</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">17.91%</td>
+              <td style="border: 1px solid #ddd; padding: 8px;">近期数据</td>
+            </tr>
+          </tbody>
+        </table>
+        <br>
+        <p><strong>投资参考：</strong></p>
+        <p>• 量值比低于20%：市场可能处于底部区域，可考虑分批建仓</p>
+        <p>• 量值比在20%-40%：市场处于正常区间，可保持适中仓位</p>
+        <p>• 量值比高于60%：市场可能过热，需谨慎操作</p>
+      </div>
+      <div class="modal-buttons">
+        <button @click="marketValueRatioModal.show = false" class="save-btn"><span v-once>关闭</span></button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -1176,6 +1282,18 @@ export default {
           finalPosition: ''
         }
       },
+      // 两市量值比计算详情模态框相关数据
+      marketValueRatioModal: {
+        show: false,
+        currentRatio: '',
+        tradingVolume: '',
+        marketCap: '',
+        calculationDetails: {
+          tradingVolumeSum: 0,
+          marketCapValue: 0,
+          ratio: 0
+        }
+      }
     }
   },
   methods: {
@@ -2704,6 +2822,73 @@ export default {
       // 已按日期从近到远排序，第一个就是最新的
       const latestPe = zzqzData[0].pe;
       return latestPe ? parseFloat(latestPe).toFixed(2) : '--';
+    },
+    
+    // 显示两市量值比计算详情模态框
+    showMarketValueRatioModal() {
+      // 获取两市量值比的数据
+      const marketValueRatioData = this.temperatureData.find(item => item.name === '两市量值比');
+      const tradingVolumeData = this.temperatureData.find(item => item.name === '两市近22日成交额');
+      
+      if (!marketValueRatioData || !tradingVolumeData) {
+        console.error('无法获取两市量值比或成交额数据');
+        return;
+      }
+      
+      // 获取两市当月市值（默认值）
+      let marketCapValue = 1032876; // 默认市值
+      
+      // 先显示模态框，使用当前显示的值
+      const currentRatio = parseFloat(marketValueRatioData.temperature.replace('%', '')) || 0;
+      const estimatedTradingVolume = (currentRatio / 100) * marketCapValue;
+      
+      this.marketValueRatioModal = {
+        show: true,
+        currentRatio: marketValueRatioData.temperature,
+        tradingVolume: estimatedTradingVolume.toLocaleString(),
+        marketCap: marketCapValue.toLocaleString(),
+        calculationDetails: {
+          tradingVolumeSum: estimatedTradingVolume,
+          marketCapValue: marketCapValue,
+          ratio: currentRatio,
+          dailyTradingVolumes: [] // 初始化为空数组，稍后填充
+        }
+      };
+      
+      // 然后尝试从Trading_Volume数据中获取更准确的值
+      chrome.storage.local.get(['Trading_Volume'], (result) => {
+        if (result.Trading_Volume && Array.isArray(result.Trading_Volume) && result.Trading_Volume.length > 0) {
+          // 获取最近的22条数据
+          const recent22Data = result.Trading_Volume.slice(0, 22);
+          
+          // 计算volume值之和
+          const sum = recent22Data.reduce((acc, item) => {
+            // 移除volume中的逗号并转换为数字
+            const volume = parseFloat(item.volume.replace(/,/g, '')) || 0;
+            return acc + volume;
+          }, 0);
+          
+          // 计算比值（百分比）
+          const ratio = (sum / marketCapValue) * 100;
+          
+          // 更新模态框数据，包括每日成交额明细
+          this.marketValueRatioModal = {
+            show: true,
+            currentRatio: ratio.toFixed(2) + '%',
+            tradingVolume: sum.toLocaleString(),
+            marketCap: marketCapValue.toLocaleString(),
+            calculationDetails: {
+              tradingVolumeSum: sum,
+              marketCapValue: marketCapValue,
+              ratio: ratio,
+              dailyTradingVolumes: recent22Data // 添加每日成交额数据
+            }
+          };
+        } else {
+          // 如果没有Trading_Volume数据，创建一个空数组
+          this.marketValueRatioModal.calculationDetails.dailyTradingVolumes = [];
+        }
+      });
     }
   },
   mounted() {
@@ -2781,8 +2966,8 @@ export default {
         const targetTemp2024 = parseFloat(this.temperatureData[0][targetDate2024]) || 0;
         this.shouldHighlight2024 = this.todayTempValue <= targetTemp2024;
       }
-      if (result.haomai_date) {
-        this.haomaiDate = result.haomai_date;
+      if (result.haomaiDate) {
+        this.haomaiDate = result.haomaiDate;
       }
       if (Array.isArray(result.positions)) {
         this.positions = result.positions;
@@ -2843,7 +3028,7 @@ export default {
             const targetYear = targetDate.getFullYear();
             const targetMonth = targetDate.getMonth();
             const targetDay = targetDate.getDate();
-            
+             
             // 查找指定日期的PE值
             const record = zzqzData.find(item => {
               if (!item.date) return false;
