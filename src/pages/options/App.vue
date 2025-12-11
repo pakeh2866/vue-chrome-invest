@@ -2789,7 +2789,7 @@ export default {
       }
       
       // 获取两市当月市值（默认值）
-      let marketCapValue = 1032876; // 默认市值
+      let marketCapValue = 1046179; // 默认市值，11月
       
       // 先显示模态框，使用当前显示的值
       const currentRatio = parseFloat(marketValueRatioData.temperature.replace('%', '')) || 0;
