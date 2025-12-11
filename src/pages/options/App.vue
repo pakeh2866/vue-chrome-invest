@@ -66,12 +66,6 @@
           <th>正常区间上沿</th>
           <th>压力位</th>
           <th>TX市盈率</th>
-          <th>五年平均值</th>
-          <th>十年平均值</th>
-          <th>五年百分位</th>
-          <th>十年百分位</th>
-          <th>历史百分位</th>
-          <th>建议仓位</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -141,47 +135,6 @@
             color: isPERatioExceeded(item.currentPE, getLatestPe(codeToPeKey(item.code))) ? 'red' : '',
             backgroundColor: item.currentPE && getFiveYearAverage(codeToPeKey(item.code)) !== '--' && parseFloat(item.currentPE) < parseFloat(getFiveYearAverage(codeToPeKey(item.code))) ? 'lightgreen' : ''
           }">{{ item.currentPE }}</td>
-          <td style="cursor: pointer; text-decoration: underline;" @click="showFiveYearAverageModal(item)">
-            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
-              {{ getFiveYearAverage(codeToPeKey(item.code)) }}
-            </span>
-            <span v-else>--</span>
-          </td>
-          <td style="cursor: pointer; text-decoration: underline;" @click="showTenYearAverageModal(item)">
-            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
-              {{ getTenYearAverage(codeToPeKey(item.code)) }}
-            </span>
-            <span v-else>--</span>
-          </td>
-          <td style="cursor: pointer; text-decoration: underline;"
-              :style="{ backgroundColor: getFiveYearPercentileColor(item) }"
-              @click="showFiveYearPercentileModal(item)">
-            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
-              {{ getFiveYearPercentile(item.currentPE, codeToPeKey(item.code)) }}%
-            </span>
-            <span v-else>--</span>
-          </td>
-          <td style="cursor: pointer; text-decoration: underline;"
-              :style="{ backgroundColor: getTenYearPercentileColor(item) }"
-              @click="showTenYearPercentileModal(item)">
-            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
-              {{ getTenYearPercentile(item.currentPE, codeToPeKey(item.code)) }}%
-            </span>
-            <span v-else>--</span>
-          </td>
-          <td style="cursor: pointer; text-decoration: underline;"
-              :style="{ backgroundColor: getHistoryPercentileColor(item) }"
-              @click="showHistoryPercentileModal(item)">
-            <span v-if="peValuesMap[codeToPeKey(item.code)] && peValuesMap[codeToPeKey(item.code)].length > 0">
-              {{ getHistoryPercentileForDisplay(item) }}%
-            </span>
-            <span v-else>--</span>
-          </td>
-          <td style="cursor: pointer; text-decoration: underline;"
-              :style="{ backgroundColor: getSuggestedPositionColor(item) }"
-              @click="showSuggestedPositionModal(item)">
-            {{ calculateSuggestedPosition(item) }}
-          </td>
           <td class="action-buttons">
             <button
               @click="onCheeseDataClick(item)"
