@@ -894,6 +894,16 @@
         <p>• 该指标反映了市场资金流动性与市值的相对关系</p>
         <br>
         
+        <p><strong>两市当月市值（亿元）：</strong>
+          <input 
+            type="number" 
+            v-model.number="customMarketCap" 
+            @change="updateMarketCapAndRecalculate"
+            style="width: 120px; padding: 4px; margin-left: 10px;"
+          />
+        </p>
+        <br>
+        
         <p><strong>近22日成交额总和：{{ marketValueRatioModal.tradingVolume }}</strong></p>
         <p>下面列出22日的成交额：</p>
         <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; margin-top: 10px;">
@@ -1246,7 +1256,8 @@ export default {
           marketCapValue: 0,
           ratio: 0
         }
-      }
+      },
+      customMarketCap: 1080179
     }
   },
   methods: {
@@ -2788,8 +2799,8 @@ export default {
         return;
       }
       
-      // 获取两市当月市值（默认值）
-      let marketCapValue = 1080179; // 默认市值，12月
+      // 获取两市当月市值（使用自定义值或默认值）
+      let marketCapValue = this.customMarketCap || 1080179;
       
       // 先显示模态框，使用当前显示的值
       const currentRatio = parseFloat(marketValueRatioData.temperature.replace('%', '')) || 0;
@@ -2842,11 +2853,37 @@ export default {
           this.marketValueRatioModal.calculationDetails.dailyTradingVolumes = [];
         }
       });
+    },
+    
+    // 更新自定义市值并重新计算
+    updateMarketCapAndRecalculate() {
+      this.customMarketCap = parseFloat(this.customMarketCap) || 1080179;
+      chrome.storage.local.set({ 'customMarketCap': this.customMarketCap }, () => {
+        console.log('自定义市值已保存:', this.customMarketCap);
+      });
+      
+      // 如果有成交额数据，重新计算量值比
+      const sum = this.marketValueRatioModal.calculationDetails.tradingVolumeSum;
+      if (sum > 0) {
+        const ratio = (sum / this.customMarketCap) * 100;
+        this.marketValueRatioModal.currentRatio = ratio.toFixed(2) + '%';
+        this.marketValueRatioModal.marketCap = this.customMarketCap.toLocaleString();
+        this.marketValueRatioModal.calculationDetails.marketCapValue = this.customMarketCap;
+        this.marketValueRatioModal.calculationDetails.ratio = ratio;
+      }
+    },
+    
+    // 更新自定义市值
+    updateCustomMarketCap(newValue) {
+      this.customMarketCap = parseFloat(newValue) || 1080179;
+      chrome.storage.local.set({ 'customMarketCap': this.customMarketCap }, () => {
+        console.log('自定义市值已保存:', this.customMarketCap);
+      });
     }
   },
   mounted() {
     chrome.storage.local.get([
-      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable', 'Trading_Volume'
+      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable', 'Trading_Volume', 'customMarketCap'
     ], (result) => {
       console.log('读取到的indexData:', result.indexData);
       console.log('读取到的pe_values:', result.all_pe_data);
@@ -3108,7 +3145,9 @@ export default {
           if (marketCapIndex !== -1) {
             // 获取两市当月市值，如果没有值则使用默认值 1032876
             let marketCap = 1032876;
-            if (this.temperatureData[marketCapIndex].temperature && this.temperatureData[marketCapIndex].temperature !== '') {
+            if (this.customMarketCap) {
+              marketCap = this.customMarketCap;
+            } else if (this.temperatureData[marketCapIndex].temperature && this.temperatureData[marketCapIndex].temperature !== '') {
               marketCap = parseFloat(this.temperatureData[marketCapIndex].temperature.replace(/,/g, '')) || 940675;
             }
             
@@ -3117,6 +3156,11 @@ export default {
             this.temperatureData[marketCapIndex].temperature = ratio.toFixed(2) + '%';
           }
         }
+      }
+      
+      // 加载自定义市值
+      if (result.customMarketCap) {
+        this.customMarketCap = result.customMarketCap;
       }
     });
     this.$watch(
