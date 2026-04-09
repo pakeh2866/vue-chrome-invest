@@ -1,6 +1,6 @@
 {
   "name": "create-vue-chrome-ext",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "chrome插件快速开发",
   "scripts": {
     "start": "npm run dev",

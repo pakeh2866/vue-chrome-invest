@@ -42,10 +42,10 @@
     },
     {
       "matches": [
-        "https://stock.cheesefortune.com/pepChat*"
+        "https://www.etf.run/*"
       ],
       "js": [
-        "js/content_cheesefortune.js"
+        "js/content_run.js"
       ]
     },
     {
