@@ -992,7 +992,9 @@ const targetUrls = [
     "https://youzhiyouxing.cn/data", // 替换为你的第一个目标网站 URL
     "https://youzhiyouxing.cn/data/market", // 如果有更多，可以在这里添加
     "https://trade.ehowbuy.com/vue-newpig/tool/thermometerDetail",
-    "https://summary.jrj.com.cn/dataCenter/zdtwdj"
+    "https://summary.jrj.com.cn/dataCenter/zdtwdj",
+    "https://www.etf.run/"
+
 ];
 
 // 用于存储图表实例
