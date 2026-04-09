@@ -1133,7 +1133,7 @@ export default {
             '2024-9-13': '7.3'
           },
           {
-            name: '中证全指PE',
+            name: 'run估值数据',
             temperature: '',
             yield: '',
           },
@@ -2764,21 +2764,7 @@ export default {
       return diffDays > 3;
     },
     
-    // 获取中证全指PE的最新值
-    getZZQZLatestPE() {
-      if (!this.rawPeData || !this.rawPeData['000985.CSI'] || !Array.isArray(this.rawPeData['000985.CSI'])) {
-        return '--';
-      }
-      
-      const zzqzData = this.rawPeData['000985.CSI'];
-      if (zzqzData.length === 0) {
-        return '--';
-      }
-      
-      // 已按日期从近到远排序，第一个就是最新的
-      const latestPe = zzqzData[0].pe;
-      return latestPe ? parseFloat(latestPe).toFixed(2) : '--';
-    },
+
     
     // 显示两市量值比计算详情模态框
     showMarketValueRatioModal() {
@@ -2912,6 +2898,16 @@ export default {
         return item;
       });
       this.temperatureData[1].temperature = result['haomai_today-temp'] ? `${result['haomai_today-temp']}` : 'N/A';
+      
+      // 获取run估值数据
+      const runMarketData = result.market_data || {};
+      const runIndexCode = Object.keys(runMarketData)[0];
+      if (runIndexCode && runMarketData[runIndexCode]) {
+        const marketInfo = runMarketData[runIndexCode];
+        this.temperatureData[2].temperature = marketInfo.pe !== null ? marketInfo.pe : '';
+        this.temperatureData[2].yield = marketInfo.percentile || '';
+      }
+      
       if (result.todayTemp) {
         this.todayTempValue = parseFloat(result.todayTemp);
         this.temperatureData[0].temperature = `${result.todayTemp}`;
@@ -3004,66 +3000,7 @@ export default {
           console.log('all_pe_data 已按日期从近到远排序并保存');
         });
         
-        // 获取中证全指PE数据
-        if (sortedAllPeData['000985.CSI'] && Array.isArray(sortedAllPeData['000985.CSI']) && sortedAllPeData['000985.CSI'].length > 0) {
-          const zzqzData = sortedAllPeData['000985.CSI'];
-          const latestPe = zzqzData[0].pe; // 已按日期从近到远排序，第一个就是最新的
-          this.temperatureData[2].temperature = latestPe ? parseFloat(latestPe).toFixed(2) : 'N/A';
-          
-          // 计算中证全指PE的历史百分位
-          const peValues = zzqzData.map(item => parseFloat(item.pe)).filter(pe => !isNaN(pe));
-          if (peValues.length > 0) {
-            const currentPe = parseFloat(latestPe);
-            if (!isNaN(currentPe)) {
-              const lowerCount = peValues.filter(pe => pe < currentPe).length;
-              const percentile = ((lowerCount / peValues.length) * 100).toFixed(0);
-              this.temperatureData[2].yield = `${percentile}%`;
-            }
-          }
-          
-          // 填充中证全指PE在指定日期的值
-          const dates = ['2015-6-12', '2019-1-2', '2021-2-19', '2022-4-26', '2022-10-31', '2024-2-5', '2024-9-13'];
-          dates.forEach((date) => {
-            const targetDate = new Date(date);
-            const targetYear = targetDate.getFullYear();
-            const targetMonth = targetDate.getMonth();
-            const targetDay = targetDate.getDate();
-             
-            // 查找指定日期的PE值
-            const record = zzqzData.find(item => {
-              if (!item.date) return false;
-              const itemDate = new Date(item.date);
-              return itemDate.getFullYear() === targetYear &&
-                     itemDate.getMonth() === targetMonth &&
-                     itemDate.getDate() === targetDay;
-            });
-            
-            if (record && record.pe) {
-              // 如果找到确切日期的记录，使用该记录的PE值
-              this.temperatureData[2][date] = parseFloat(record.pe).toFixed(2);
-            } else {
-              // 如果没有找到确切日期的记录，查找最接近的日期
-              let closestRecord = null;
-              let minDiff = Infinity;
-              
-              zzqzData.forEach(item => {
-                if (!item.date || !item.pe) return;
-                const itemDate = new Date(item.date);
-                const diff = Math.abs(itemDate - targetDate);
-                if (diff < minDiff) {
-                  minDiff = diff;
-                  closestRecord = item;
-                }
-              });
-              
-              if (closestRecord) {
-                this.temperatureData[2][date] = parseFloat(closestRecord.pe).toFixed(2);
-              } else {
-                this.temperatureData[2][date] = 'N/A';
-              }
-            }
-          });
-        }
+
       }
       console.log('storage.positions:', this.positions);
       // 保存原始顺序
