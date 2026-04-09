@@ -41,7 +41,6 @@
     <div style="display: flex; align-items: center; gap: 10px;">
         <h2 style="margin-right: 10px;">指数参考</h2>
         <button @click="addIndex">新增指数</button>
-        <button @click="fetchZsData" style="margin-left: 10px;">一键zs数据</button>
       </div>
     <table class="data-table">
       <thead>
@@ -1593,14 +1592,6 @@ export default {
     },
 
     // 一键zs数据按钮功能（暂空）
-    fetchZsData() {
-      // 遍历所有指数数据，打开芝士链接
-      this.indexData.forEach(item => {
-        if (item.cheeseUrl && item.cheeseUrl.trim()) {
-          window.open(item.cheeseUrl, '_blank');
-        }
-      });
-    },
     // 判断TX市盈率与zs市盈率差值是否超过2%
     isPERatioExceeded(txPE, zsPE) {
       // 确保两个值都存在且为有效数字
