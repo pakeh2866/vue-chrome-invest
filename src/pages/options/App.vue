@@ -32,7 +32,7 @@
       <tr v-for="(item, index) in temperatureData" :key="index">
         <td>{{ item.name }}</td>
         <td @click="item.name === '两市量值比' ? showMarketValueRatioModal() : null" :style="item.name === '两市量值比' ? 'cursor: pointer; text-decoration: underline;' : ''">
-          {{ item.temperature }}
+          {{ item.name === '两市量值比' ? latestRatio : item.temperature }}
         </td>
         <td>{{ item.yield }}</td>
         <td v-for="date in ['2015-6-12', '2019-1-2', '2021-2-19', '2022-4-26', '2022-10-31', '2024-2-5', '2024-9-13']" :key="date" :class="{ 'highlight': item[`${date}_isNext`], 'deep-green': (date === '2019-1-2' && shouldHighlight2019) || (date === '2024-2-5' && shouldHighlight2024) }">
@@ -2848,6 +2848,18 @@ export default {
               dailyTradingVolumes: recent22Data // 添加每日成交额数据
             }
           };
+
+          // 同步更新表格中的显示值
+          const marketCapIndex2 = this.temperatureData.findIndex(item => item.name === '两市量值比');
+          if (marketCapIndex2 !== -1) {
+            this.temperatureData[marketCapIndex2].temperature = ratio.toFixed(2) + '%';
+          }
+
+          // 同步更新“两市近22日成交额”显示，保持与模态一致
+          const tradingVolumeIndex2 = this.temperatureData.findIndex(item => item.name === '两市近22日成交额');
+          if (tradingVolumeIndex2 !== -1) {
+            this.temperatureData[tradingVolumeIndex2].temperature = sum.toLocaleString();
+          }
         } else {
           // 如果没有Trading_Volume数据，创建一个空数组
           this.marketValueRatioModal.calculationDetails.dailyTradingVolumes = [];
@@ -2870,6 +2882,12 @@ export default {
         this.marketValueRatioModal.marketCap = this.customMarketCap.toLocaleString();
         this.marketValueRatioModal.calculationDetails.marketCapValue = this.customMarketCap;
         this.marketValueRatioModal.calculationDetails.ratio = ratio;
+
+        // 同步更新主表中的“两市量值比”展示
+        const marketCapIndex3 = this.temperatureData.findIndex(item => item.name === '两市量值比');
+        if (marketCapIndex3 !== -1) {
+          this.temperatureData[marketCapIndex3].temperature = ratio.toFixed(2) + '%';
+        }
       }
     },
     
@@ -3143,14 +3161,17 @@ export default {
           // 计算"两市量值比"的值（两市近22日成交额除两市当月市值）
           const marketCapIndex = this.temperatureData.findIndex(item => item.name === '两市量值比');
           if (marketCapIndex !== -1) {
-            // 获取两市当月市值，如果没有值则使用默认值 1032876
+            // 获取两市当月市值：优先使用本次从 storage 读取到的值，其次使用组件中的值，最后回退默认值
             let marketCap = 1032876;
-            if (this.customMarketCap) {
+            const storedMarketCap = result.customMarketCap;
+            if (storedMarketCap && !isNaN(parseFloat(storedMarketCap))) {
+              marketCap = parseFloat(storedMarketCap);
+            } else if (this.customMarketCap) {
               marketCap = this.customMarketCap;
             } else if (this.temperatureData[marketCapIndex].temperature && this.temperatureData[marketCapIndex].temperature !== '') {
               marketCap = parseFloat(this.temperatureData[marketCapIndex].temperature.replace(/,/g, '')) || 940675;
             }
-            
+
             // 计算比值（百分比）
             const ratio = (sum / marketCap) * 100;
             this.temperatureData[marketCapIndex].temperature = ratio.toFixed(2) + '%';
@@ -3412,12 +3433,8 @@ export default {
       if (!tempData || tempData.temperature === undefined || tempData.temperature === null || tempData.temperature === '') {
         return 'N/A';
       }
-      // 获取两市当月市值数据
-      const marketCapData = this.temperatureData[4];
-      let marketCap = 940675; // 默认值
-      if (marketCapData && marketCapData.temperature && marketCapData.temperature !== '') {
-        marketCap = parseFloat(marketCapData.temperature.replace(/,/g, '')) || 940675;
-      }
+      // 获取两市当月市值：使用自定义值或默认值
+      let marketCap = parseFloat(this.customMarketCap) || 1032876; // 默认按亿元口径
       const value = (parseFloat(tempData.temperature.replace(/,/g, '')) / marketCap) * 100;
       if (isNaN(value)) {
         return 'N/A';
