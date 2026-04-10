@@ -2,7 +2,7 @@
 
 const currentUrl = window.location.href;
 console.log(currentUrl);
-console.log("主内容脚本 content_run.js 已加载到页面:", window.location.href);
+console.log("content_run.js 已加载:", window.location.href);
 
 
 
@@ -32,16 +32,14 @@ setTimeout(function() {
   if (market_pe !== null || market_percentile !== null) {
       chrome.storage.local.get('market_data', function(result) {
           const marketData = result.market_data || {};
-          if (index_code) {
-              marketData[index_code] = {
-                  pe: market_pe,
-                  percentile: market_percentile,
-                  updateTime: new Date().toISOString()
-              };
-              chrome.storage.local.set({ 'market_data': marketData }, function() {
-                  console.log('市场数据已保存:', marketData[index_code]);
-              });
-          }
+          marketData['current'] = {
+              pe: market_pe,
+              percentile: market_percentile,
+              updateTime: new Date().toISOString()
+          };
+          chrome.storage.local.set({ 'market_data': marketData }, function() {
+              console.log('市场数据已保存:', marketData['current']);
+          });
       });
   }
-}, 1000);
+}, 2000);

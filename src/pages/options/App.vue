@@ -1136,6 +1136,13 @@ export default {
             name: 'run估值数据',
             temperature: '',
             yield: '',
+            '2015-6-12': '131.04',
+            '2019-1-2': '28.21',
+            '2021-2-19': '39.07',
+            '2022-4-26': '28.41',
+            '2022-10-31': '33.97',
+            '2024-2-5': '27.41',
+            '2024-9-13': '30.23',
           },
           {
             name: '两市近22日成交额',
@@ -2879,7 +2886,7 @@ export default {
   },
   mounted() {
     chrome.storage.local.get([
-      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable', 'Trading_Volume', 'customMarketCap'
+      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable', 'Trading_Volume', 'customMarketCap','market_data'
     ], (result) => {
       console.log('读取到的indexData:', result.indexData);
       console.log('读取到的pe_values:', result.all_pe_data);
@@ -2901,11 +2908,10 @@ export default {
       
       // 获取run估值数据
       const runMarketData = result.market_data || {};
-      const runIndexCode = Object.keys(runMarketData)[0];
-      if (runIndexCode && runMarketData[runIndexCode]) {
-        const marketInfo = runMarketData[runIndexCode];
-        this.temperatureData[2].temperature = marketInfo.pe !== null ? marketInfo.pe : '';
-        this.temperatureData[2].yield = marketInfo.percentile || '';
+      const currentData = runMarketData['current'];
+      if (currentData) {
+        this.temperatureData[2].temperature = currentData.pe !== null ? currentData.pe : '';
+        this.temperatureData[2].yield = currentData.percentile || '';
       }
       
       if (result.todayTemp) {
