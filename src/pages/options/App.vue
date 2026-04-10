@@ -384,20 +384,21 @@
      <div class="modal-content" style="width: 500px;">
        <h3>建议A股仓位计算逻辑</h3>
        <div style="text-align: left; font-size: 14px; line-height: 1.6;">
-          <p><strong>计算公式：</strong></p>
-          <p>1. 计算平均温度 = (有知有行温度 × 0.7 + 好买温度 × 0.3)</p>
-          <p>2. 根据平均温度在温度-仓位对照表中进行线性插值计算建议仓位</p>
-          <br>
-          <p><strong>数据来源：</strong></p>
-          <p>• 有知有行温度：{{ temperatureData[0]?.temperature || 'N/A' }}</p>
-          <p>• 好买温度：{{ temperatureData[1]?.temperature || 'N/A' }}</p>
-          <br>
-          <p><strong>计算过程：</strong></p>
-          <p v-if="temperatureData && temperatureData.length >= 2">
-            平均温度 = ({{ parseFloat(temperatureData[0]?.temperature) || 'N/A' }} × 0.7 + {{ parseFloat(temperatureData[1]?.temperature) || 'N/A' }} × 0.3)<br>
-            = {{ (parseFloat(temperatureData[0]?.temperature) * 0.7 + parseFloat(temperatureData[1]?.temperature) * 0.3) || 'N/A' }}<br>
-            建议仓位 = {{ suggestedPositionAH }}<br>
-          </p>
+        <p><strong>计算公式：</strong></p>
+           <p>1. 计算平均温度 = (有知有行温度 × 0.6 + 好买温度 × 0.2 + run估值数据历史百分位 × 0.2)</p>
+           <p>2. 根据平均温度在温度-仓位对照表中进行线性插值计算建议仓位</p>
+           <br>
+           <p><strong>数据来源：</strong></p>
+           <p>• 有知有行温度：{{ temperatureData[0]?.temperature || 'N/A' }}</p>
+           <p>• 好买温度：{{ temperatureData[1]?.temperature || 'N/A' }}</p>
+           <p>• run估值历史百分位：{{ temperatureData[2]?.yield || 'N/A' }}</p>
+           <br>
+           <p><strong>计算过程：</strong></p>
+           <p v-if="temperatureData && temperatureData.length >= 3">
+             平均温度 = ({{ parseFloat(temperatureData[0]?.temperature) || 'N/A' }} × 0.6 + {{ parseFloat(temperatureData[1]?.temperature) || 'N/A' }} × 0.2 + {{ parseFloat(temperatureData[2]?.yield?.replace('%','')) || 'N/A' }} × 0.2)<br>
+             = {{ (parseFloat(temperatureData[0]?.temperature) * 0.6 + parseFloat(temperatureData[1]?.temperature) * 0.2 + parseFloat(temperatureData[2]?.yield?.replace('%','')) * 0.2) || 'N/A' }}<br>
+             建议仓位 = {{ suggestedPositionAH }}<br>
+           </p>
           <p v-else>数据尚未加载完成</p>
           <br>
           <p><strong>温度-仓位对照表：</strong></p>
@@ -3155,19 +3156,21 @@ export default {
     // 缓存温度数据解析
     parsedTemperatureData() {
       if (!this.isTemperatureDataValid) {
-        return { youzhiyouxingTemp: NaN, haomaiTemp: NaN };
+        return { youzhiyouxingTemp: NaN, haomaiTemp: NaN, runPercentile: NaN };
       }
       
       const youzhiyouxingTemp = parseFloat(this.temperatureData[0].temperature);
       const haomaiTemp = parseFloat(this.temperatureData[1].temperature);
+      const runYield = this.temperatureData[2].yield || '';
+      const runPercentile = runYield.includes('%') ? parseFloat(runYield.replace('%', '')) : NaN;
       
-      return { youzhiyouxingTemp, haomaiTemp };
+      return { youzhiyouxingTemp, haomaiTemp, runPercentile };
     },
     
     // 缓存温度数据是否有效
     isTemperatureValuesValid() {
-      const { youzhiyouxingTemp, haomaiTemp } = this.parsedTemperatureData;
-      return !isNaN(youzhiyouxingTemp) && !isNaN(haomaiTemp);
+      const { youzhiyouxingTemp, haomaiTemp, runPercentile } = this.parsedTemperatureData;
+      return !isNaN(youzhiyouxingTemp) && !isNaN(haomaiTemp) && !isNaN(runPercentile);
     },
     
     // 缓存平均温度计算
@@ -3176,8 +3179,8 @@ export default {
         return NaN;
       }
       
-      const { youzhiyouxingTemp, haomaiTemp } = this.parsedTemperatureData;
-      return (youzhiyouxingTemp * 0.7 + haomaiTemp * 0.3);
+      const { youzhiyouxingTemp, haomaiTemp, runPercentile } = this.parsedTemperatureData;
+      return (youzhiyouxingTemp * 0.6 + haomaiTemp * 0.2 + runPercentile * 0.2);
     },
     
     // 优化后的建议A股仓位计算
