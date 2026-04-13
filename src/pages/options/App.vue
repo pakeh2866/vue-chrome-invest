@@ -130,10 +130,7 @@
           <td :style="{ backgroundColor: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#ff4d4f' : '', color: item.currentIndexPoint && item.pressureLevel && item.currentIndexPoint > item.pressureLevel ? '#fff' : '', borderRight: '3px solid #333' }">
             {{ item.pressureLevel }}
           </td>
-          <td :style="{
-            color: isPERatioExceeded(item.currentPE, getLatestPe(codeToPeKey(item.code))) ? 'red' : '',
-            backgroundColor: item.currentPE && getFiveYearAverage(codeToPeKey(item.code)) !== '--' && parseFloat(item.currentPE) < parseFloat(getFiveYearAverage(codeToPeKey(item.code))) ? 'lightgreen' : ''
-          }">{{ item.currentPE }}</td>
+          <td>{{ item.currentPE }}</td>
           <td class="action-buttons">
             <button
               @click="onCheeseDataClick(item)"
