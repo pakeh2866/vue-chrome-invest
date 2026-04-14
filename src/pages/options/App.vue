@@ -2595,13 +2595,17 @@ export default {
     // 计算建议仓位
     calculateSuggestedPosition(item) {
       try {
-        // 直接使用表格中显示的百分位值
-        const fiveYearPercentile = parseFloat(this.getFiveYearPercentile(item.currentPE, this.codeToPeKey(item.code))) || 0;
-        const tenYearPercentile = parseFloat(this.getTenYearPercentile(item.currentPE, this.codeToPeKey(item.code))) || 0;
-        const historyPercentile = parseFloat(this.getHistoryPercentileForDisplay(item)) || 0;
+        // 使用run百分位直接作为综合百分位
+        if (!item.runPercentile || item.runPercentile === '--') {
+          return '--';
+        }
+        const runPercentile = parseFloat(item.runPercentile);
+        if (isNaN(runPercentile)) {
+          return '--';
+        }
         
-        // 计算综合百分位（加权平均）
-        const combinedPercentile = (fiveYearPercentile * 0.6) + (tenYearPercentile * 0.3) + (historyPercentile * 0.1);
+        // 综合百分位 = run百分位的值
+        const combinedPercentile = runPercentile;
         
         // 计算建议仓位（1 - 综合百分位）
         const suggestedPosition = 1 - (combinedPercentile / 100);
@@ -2679,15 +2683,19 @@ export default {
        return '--';
      }
    }, // 根据建议仓位值返回颜色
-   getSuggestedPositionColor(item) {
-     try {
-        // 直接使用表格中显示的百分位值
-        const fiveYearPercentile = parseFloat(this.getFiveYearPercentile(item.currentPE, this.codeToPeKey(item.code))) || 0;
-        const tenYearPercentile = parseFloat(this.getTenYearPercentile(item.currentPE, this.codeToPeKey(item.code))) || 0;
-        const historyPercentile = parseFloat(this.getHistoryPercentileForDisplay(item)) || 0;
-        
-        // 计算综合百分位（加权平均）
-        const combinedPercentile = (fiveYearPercentile * 0.6) + (tenYearPercentile * 0.3) + (historyPercentile * 0.1);
+    getSuggestedPositionColor(item) {
+      try {
+         // 使用run百分位直接作为综合百分位
+         if (!item.runPercentile || item.runPercentile === '--') {
+           return '';
+         }
+         const runPercentile = parseFloat(item.runPercentile);
+         if (isNaN(runPercentile)) {
+           return '';
+         }
+         
+         // 综合百分位 = run百分位的值
+         const combinedPercentile = runPercentile;
         
         // 计算建议仓位（1 - 综合百分位）
         const suggestedPosition = 1 - (combinedPercentile / 100);
