@@ -2904,16 +2904,25 @@ export default {
       
       // 合并run数据
       const indexRunData = result.index_run_data || {};
+      console.log('index_run_data内容:', indexRunData);
+      
       this.indexData = arr.map(item => {
         // 迁移旧数据中的viewPoint到currentIndexPoint
         let newItem = item;
         if (item.viewPoint !== undefined) {
           newItem = { ...item, currentIndexPoint: item.viewPoint, viewPoint: undefined };
         }
-        // 填充run市盈率和百分位
-        if (indexRunData[item.code]) {
-          newItem.runPE = indexRunData[item.code].runPE;
-          newItem.runPercentile = indexRunData[item.code].runPercentile;
+        // 代码去掉前两位后匹配
+        const runCode = item.code && item.code.length > 2 ? item.code.substring(2) : item.code;
+        console.log('指数代码:', item.code, '匹配run代码:', runCode);
+        
+        if (indexRunData[runCode]) {
+          newItem.runPE = indexRunData[runCode].runPE;
+          newItem.runPercentile = indexRunData[runCode].runPercentile;
+          console.log('匹配成功:', runCode, 'PE:', newItem.runPE, '百分位:', newItem.runPercentile);
+        } else {
+          newItem.runPE = '--';
+          newItem.runPercentile = '--';
         }
         return newItem;
       });
