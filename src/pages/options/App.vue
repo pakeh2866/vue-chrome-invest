@@ -65,6 +65,8 @@
           <th>正常区间上沿</th>
           <th>压力位</th>
           <th>TX市盈率</th>
+          <th>run市盈率</th>
+          <th>run百分位</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -131,6 +133,8 @@
             {{ item.pressureLevel }}
           </td>
           <td>{{ item.currentPE }}</td>
+          <td>{{ item.runPE || '--' }}</td>
+          <td>{{ item.runPercentile || '--' }}</td>
           <td class="action-buttons">
             <button
               @click="onCheeseDataClick(item)"
@@ -2884,10 +2888,12 @@ export default {
   },
   mounted() {
     chrome.storage.local.get([
-      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable', 'Trading_Volume', 'customMarketCap','market_data'
+      'todayTemp', 'dateDegreeDB', 'haomai_today-temp', 'indexData', 'all_pe_data', 'haomai_date', 'positions', 'positionSortByRatio', 'temperaturePositionTable', 'Trading_Volume', 'customMarketCap','market_data', 'index_run_data'
     ], (result) => {
       console.log('读取到的indexData:', result.indexData);
       console.log('读取到的pe_values:', result.all_pe_data);
+      console.log('读取到的index_run_data:', result.index_run_data);
+      
       let arr = [];
       if (Array.isArray(result.indexData)) {
         arr = result.indexData;
@@ -2895,13 +2901,23 @@ export default {
         // 可能是 {0: {...}, 1: {...}} 这种对象
         arr = Object.values(result.indexData);
       }
+      
+      // 合并run数据
+      const indexRunData = result.index_run_data || {};
       this.indexData = arr.map(item => {
         // 迁移旧数据中的viewPoint到currentIndexPoint
+        let newItem = item;
         if (item.viewPoint !== undefined) {
-          return { ...item, currentIndexPoint: item.viewPoint, viewPoint: undefined };
+          newItem = { ...item, currentIndexPoint: item.viewPoint, viewPoint: undefined };
         }
-        return item;
+        // 填充run市盈率和百分位
+        if (indexRunData[item.code]) {
+          newItem.runPE = indexRunData[item.code].runPE;
+          newItem.runPercentile = indexRunData[item.code].runPercentile;
+        }
+        return newItem;
       });
+      
       this.temperatureData[1].temperature = result['haomai_today-temp'] ? `${result['haomai_today-temp']}` : 'N/A';
       
       // 获取run估值数据
