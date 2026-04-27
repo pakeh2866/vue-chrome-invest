@@ -238,12 +238,12 @@
             </span>
             <span v-else>--</span>
           </td>
-          <td>
-            <span v-if="item.relatedIndex">
-              {{ calculatePositionSuggestedPosition(item) }}
-            </span>
-            <span v-else>--</span>
-          </td>
+           <td>
+             <span v-if="item.relatedIndex" @click="showPositionSuggestedModal(item)" style="cursor: pointer; text-decoration: underline;">
+               {{ calculatePositionSuggestedPosition(item) }}
+             </span>
+             <span v-else>--</span>
+           </td>
           <td>
             <span v-if="item.relatedIndex">
               {{ getIndexNameByCode(item.relatedIndex) }}
@@ -870,9 +870,40 @@
         <button @click="suggestedPositionModal.show = false" class="save-btn"><span v-once>关闭</span></button>
       </div>
     </div>
-  </div>
-  
-  <!-- 两市量值比计算详情模态框 -->
+   </div>
+
+   <!-- 持仓建议仓位计算详情模态框 -->
+   <div v-if="positionSuggestedModal.show" class="modal-overlay" @click="positionSuggestedModal.show = false">
+     <div class="modal-content" style="width: 700px;" @click.stop>
+       <h3>{{ positionSuggestedModal.name }} 持仓建议仓位计算详情</h3>
+       <div style="text-align: left; font-size: 14px; line-height: 1.6;">
+         <p><strong>计算结果：</strong></p>
+         <p>{{ positionSuggestedModal.positionSuggestedPosition }}</p>
+         <p><strong>关联指数：</strong></p>
+         <p>{{ positionSuggestedModal.indexName }}</p>
+         <br>
+         <p><strong>计算逻辑：</strong></p>
+         <p>1. 获取关联指数的建议仓位</p>
+         <p>2. 持仓建议仓位 = 关联指数建议仓位 × 0.15</p>
+         <br>
+         <p><strong>计算过程：</strong></p>
+         <p>• 指数run百分位：{{ positionSuggestedModal.calculationDetails.indexRunPercentile }}%</p>
+         <p>• 指数综合百分位：{{ positionSuggestedModal.calculationDetails.indexCombinedPercentile }}%</p>
+         <p>• 指数建议仓位：1 - ({{ positionSuggestedModal.calculationDetails.indexCombinedPercentile }} / 100) = {{ positionSuggestedModal.calculationDetails.indexFinalPosition }}%</p>
+         <p>• 持仓建议仓位：{{ positionSuggestedModal.calculationDetails.indexFinalPosition }} × {{ positionSuggestedModal.calculationDetails.positionMultiplier }} = {{ positionSuggestedModal.calculationDetails.positionFinalPosition }}%</p>
+         <br>
+         <p><strong>说明：</strong></p>
+         <p>• 持仓建议仓位基于关联指数的估值水平计算</p>
+         <p>• 乘以0.15的系数是为了控制单个持仓的规模</p>
+         <p>• 实际操作时应结合市场环境和个人风险偏好综合考虑</p>
+       </div>
+       <div class="modal-buttons">
+         <button @click="positionSuggestedModal.show = false" class="save-btn"><span v-once>关闭</span></button>
+       </div>
+     </div>
+   </div>
+
+   <!-- 两市量值比计算详情模态框 -->
   <div v-if="marketValueRatioModal.show" class="modal-overlay" @click="marketValueRatioModal.show = false">
     <div class="modal-content" style="width: 700px; max-height: 85vh; overflow-y: auto;" @click.stop>
       <h3>两市量值比计算详情</h3>
@@ -1253,6 +1284,23 @@ export default {
           historyPercentile: '',
           combinedPercentile: '',
           finalPosition: ''
+        }
+      },
+      // 持仓建议仓位计算详情模态框相关数据
+      positionSuggestedModal: {
+        show: false,
+        code: '',
+        name: '',
+        relatedIndex: '',
+        indexName: '',
+        indexSuggestedPosition: '',
+        positionSuggestedPosition: '',
+        calculationDetails: {
+          indexRunPercentile: '',
+          indexCombinedPercentile: '',
+          indexFinalPosition: '',
+          positionMultiplier: '0.15',
+          positionFinalPosition: ''
         }
       },
       // 两市量值比计算详情模态框相关数据
@@ -2655,6 +2703,45 @@ export default {
       if (!code) return '';
       const index = this.indexData.find(item => item.code === code);
       return index ? `${index.name} (${index.code})` : code;
+    },
+    // 显示持仓建议仓位计算详情模态框
+    showPositionSuggestedModal(position) {
+      if (!position.relatedIndex) return;
+
+      // 找到关联的指数数据
+      const relatedIndex = this.indexData.find(item => item.code === position.relatedIndex);
+      if (!relatedIndex) return;
+
+      // 获取指数的建议仓位
+      const indexSuggestedPositionStr = this.calculateSuggestedPosition(relatedIndex);
+      if (indexSuggestedPositionStr === '--') return;
+
+      // 去掉百分号并转换为数字
+      const indexSuggestedPosition = parseFloat(indexSuggestedPositionStr.replace('%', ''));
+
+      // 计算持仓建议仓位（关联指数的建议仓位 × 0.15）
+      const positionSuggestedPosition = indexSuggestedPosition * 0.15;
+
+      // 获取指数的run百分位
+      const indexRunPercentile = relatedIndex.runPercentile || '--';
+
+      // 设置模态框数据
+      this.positionSuggestedModal = {
+        show: true,
+        code: position.code,
+        name: position.name,
+        relatedIndex: position.relatedIndex,
+        indexName: this.getIndexNameByCode(position.relatedIndex),
+        indexSuggestedPosition: indexSuggestedPositionStr,
+        positionSuggestedPosition: positionSuggestedPosition.toFixed(2) + '%',
+        calculationDetails: {
+          indexRunPercentile: indexRunPercentile,
+          indexCombinedPercentile: indexRunPercentile, // 使用run百分位作为综合百分位
+          indexFinalPosition: indexSuggestedPosition.toFixed(0),
+          positionMultiplier: '0.15',
+          positionFinalPosition: positionSuggestedPosition.toFixed(2)
+        }
+      };
     },
     // 计算持仓的建议仓位（关联指数的建议仓位 × 0.15）
     calculatePositionSuggestedPosition(position) {
