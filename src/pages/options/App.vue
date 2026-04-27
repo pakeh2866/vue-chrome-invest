@@ -141,7 +141,7 @@
               @mouseenter="showTooltip($event, getLatestPeWithDate(codeToPeKey(item.code)).date)"
               @mouseleave="hideTooltip"
               :style="{ backgroundColor: isCheeseDateOutdated(codeToPeKey(item.code)) ? '#ffa940' : '' }"
-            ><span v-once>芝士</span></button>
+            ><span v-once>run</span></button>
             <button @click="editIndex(index)"><span v-once>编辑</span></button>
             <button @click="deleteIndex(index)"><span v-once>删除</span></button>
           </td>
